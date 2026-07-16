@@ -26,8 +26,11 @@
         const messageBtn= document.getElementById('message-button');
         const messageContainer=document.getElementById('message-container');
 
-        const { port }=window.location;
-        const connection = new WebSocket(`ws://localhost:${port}`)
+        
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+
+          const connection = new WebSocket(`${wsProtocol}//${window.location.host}`); 
         connection.onopen = ()=>{
             connection.onmessage= (message)=>{
                 console.log(`message recv..`,message);
