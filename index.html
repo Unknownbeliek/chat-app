@@ -6,8 +6,13 @@
     <title>ChatApp</title>
 </head>
 <body>
-    <h1>Hello World !!</h1>
+
+    <h1>Global Chat</h1>
     <div>
+        <input type="text"
+               placeholder="username"         
+               id="username-input"
+        >
         <input
              type="text"
              placeholder="Enter Your message"
@@ -25,30 +30,54 @@
         const messageInput = document.getElementById('message-input');
         const messageBtn= document.getElementById('message-button');
         const messageContainer=document.getElementById('message-container');
+        const usernameInput=document.getElementById('username-input')
 
-        
+        //render server
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-
-          const connection = new WebSocket(`${wsProtocol}//${window.location.host}`); 
+        const connection = new WebSocket(`${wsProtocol}//${window.location.host}`); 
+        //receiving msg 
         connection.onopen = ()=>{
             connection.onmessage= (message)=>{
                 console.log(`message recv..`,message);
                 const rawData = message.data;
                 const parsedData= JSON.parse(rawData);
                 const text = parsedData.message
+                const username =parsedData.username
 
                 const li = document.createElement('li');
-                li.innerText  = text;
+                li.innerText  = `${username} : ${text}`;
                 messageContainer.appendChild(li);
                 
             }
-            messageBtn.addEventListener('click',(ev)=>{
-                const value = messageInput.value;
-                connection.send(JSON.stringify({message : value}));
+            //Sending msg - sendMessage funtion 
+            function sendMessage(){
+                const textValue = messageInput.value;
+                const userValue = usernameInput.value;
+                
+                // preveting  empty text
+                if(!textValue) return;
+                
+                const dataToSend = {
+                    username : userValue,
+                    message     : textValue
+                }   
+                
+                connection.send(JSON.stringify(dataToSend));
 
+                messageInput.value = '';
+                
+                messageInput.focus();
+
+            }
+
+
+            messageBtn.addEventListener('click',sendMessage);
+            messageBtn.addEventListener('keypress' ,(ev)=>{
+                if(event.key === 'enter'){
+                    sendMessage();
+                }
             });
         };
-    </script>
+        </script>
 </body>
 </html>
