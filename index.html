@@ -14,7 +14,7 @@
         border: none;
         padding: 1rem;
         font-size: 1rem;
-        width: 13em;
+        width: 17em;
         border-radius: 1rem;
         color: lightcoral;
         box-shadow: 0 0.4rem #dfd9d9;
@@ -136,17 +136,34 @@ h1{
 
 }
 ul{
-
+  border: 2px solid white;
+  border-radius: 50px;
+  
 }
 ul li {
-    color: white;
+    color: rgb(185, 78, 78);
     list-style-type: none;
     border: 2px solid white;
     padding: 14px;
     width: 200px;
     border-radius: 50px;
     margin: 10px;
+    box-shadow: 0px 4px 10px 0px #c0abab9f;
 }
+#message-container {
+    height: 400px; /* Adjust this height to fit your layout */
+    overflow-y: auto; /* Adds the scrollbar when content exceeds the height */
+    display: flex;
+    flex-direction: column;
+    padding: 30px;
+    /* Optional: style the scrollbar for a better look */
+    scrollbar-width: mone; 
+    -ms-overflow-style: none;
+}
+#message-container::-webkit-scrollbar {
+    display: none; /* Hides the scrollbar in Webkit browsers */
+}
+
     </style>
   </head>
   <body>
@@ -157,7 +174,9 @@ ul li {
         placeholder="username"
         id="username-input"
         class="input"
+        required
       />
+      <ul id="message-container"></ul>
       <input
         type="text"
         placeholder="Enter Your message"
@@ -184,7 +203,6 @@ ul li {
         </svg>
         Send Message
       </button>
-      <ul id="message-container"></ul>
     </div>
     <script>
       // Selecting Dom elments
