@@ -201,17 +201,31 @@ ul li {
       );
       //receiving msg
       connection.onopen = () => {
-        connection.onmessage = (message) => {
-          console.log(`message recv..`, message);
-          const rawData = message.data;
-          const parsedData = JSON.parse(rawData);
-          const text = parsedData.message;
-          const username = parsedData.username;
+       connection.onmessage = (message) => {
+    const parsedData = JSON.parse(message.data);
 
-          const li = document.createElement("li");
-          li.innerText = `${username} : ${text}`;
-          messageContainer.appendChild(li);
-        };
+    // 1. Handle the initial load of database history
+    if (parsedData.type === 'history') {
+        const historyArray = parsedData.data;
+        historyArray.forEach(msg => {
+            const li = document.createElement("li");
+            // Note: Make sure your DB schema properties match these!
+            li.innerText = `${msg.username} : ${msg.message}`;
+            messageContainer.appendChild(li);
+        });
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+    } 
+    // 2. Handle a single live chat message coming in
+    else if (parsedData.type === 'chat') {
+        const text = parsedData.message;
+        const username = parsedData.username;
+
+        const li = document.createElement("li");
+        li.innerText = `${username} : ${text}`;
+        messageContainer.appendChild(li);
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+};
         //Sending msg - sendMessage funtion
         function sendMessage() {
           const textValue = messageInput.value;
@@ -221,7 +235,8 @@ ul li {
           if (!textValue) return;
 
           const dataToSend = {
-            username: userValue,
+            type: 'chat',
+            username: userValue || 'Anonymous',
             message: textValue,
           };
 
