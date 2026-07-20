@@ -6,7 +6,7 @@
     <title>ChatApp</title>
     <style>
       /* From Uiverse.io by adamgiebl */
-      input{
+      input {
         margin: 10px;
       }
       .input-wrapper input {
@@ -100,75 +100,75 @@
       .button:focus .send-icon {
         transform: rotate(-40deg);
       }
-      
-.system-msg { 
-    background: transparent !important; 
-    text-align: center; 
-    color: #666; 
-    font-style: italic; 
-    width: 100% !important; 
-    max-width: 100% !important;
-}
-.main-container{
-    display: grid;
-  justify-content: center; 
-  align-items: center;     
 
-}
-body{
+      .system-msg {
+        background: transparent !important;
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .main-container {
+        display: grid;
+        justify-content: center;
+        align-items: center;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #2b2b2b; /* Matches your background */
 
-  margin: 0;
-  padding: 0;
-  background-color: #2b2b2b; /* Matches your background */
-  
-  /* The alignment magic */
-  display: flex;
-  flex-direction: column;  /* Stacks items vertically */
-   /* Centers items vertically */
-  align-items: center;     /* Centers items horizontally */
-  min-height: 100vh;       /* Forces body to take full screen height */
-  gap: 15px;               /* Creates even spacing between your inputs */
-}
+        /* The alignment magic */
+        display: flex;
+        flex-direction: column; /* Stacks items vertically */
+        /* Centers items vertically */
+        align-items: center; /* Centers items horizontally */
+        min-height: 100vh; /* Forces body to take full screen height */
+        gap: 15px; /* Creates even spacing between your inputs */
+      }
 
-
-h1{
-    color: white;
-
-}
-ul{
-  border: 2px solid white;
-  border-radius: 50px;
-  
-}
-ul li {
-    color: rgb(185, 78, 78);
-    list-style-type: none;
-    border: 2px solid white;
-    padding: 14px;
-    width: 200px;
-    border-radius: 50px;
-    margin: 10px;
-    box-shadow: 0px 4px 10px 0px #c0abab9f;
-}
-#message-container {
-    height: 400px; /* Adjust this height to fit your layout */
-    overflow-y: auto; /* Adds the scrollbar when content exceeds the height */
-    display: flex;
-    flex-direction: column;
-    padding: 30px;
-    /* Optional: style the scrollbar for a better look */
-    scrollbar-width: mone; 
-    -ms-overflow-style: none;
-}
-#message-container::-webkit-scrollbar {
-    display: none; /* Hides the scrollbar in Webkit browsers */
-}
-
-    </style>
+      h1 {
+        color: white;
+      }
+      ul {
+        border: 2px solid white;
+        border-radius: 50px;
+      }
+      ul li {
+        color: rgb(185, 78, 78);
+        list-style-type: none;
+        border: 2px solid white;
+        padding: 14px;
+        width: 200px;
+        border-radius: 50px;
+        margin: 10px;
+        box-shadow: 0px 4px 10px 0px #c0abab9f;
+      }
+      #message-container {
+        height: 400px; /* Adjust this height to fit your layout */
+        overflow-y: auto; /* Adds the scrollbar when content exceeds the height */
+        display: flex;
+        flex-direction: column;
+        padding: 30px;
+        /* Optional: style the scrollbar for a better look */
+        scrollbar-width: mone;
+        -ms-overflow-style: none;
+      }
+      #message-container::-webkit-scrollbar {
+        display: none; /* Hides the scrollbar in Webkit browsers */
+      }
+      #online-count{
+        color: rgb(122, 206, 154);
+        border: 2px solid green;
+        padding: 10px;
+      }
+      </style>
   </head>
   <body>
-      <h1>Global Chat</h1>
-      <div class="input-wrapper main-container">
+    <h1>Global Chat</h1>
+    <div id="online-count"> Online: 0</div>
+    <div class="input-wrapper main-container">
       <input
         type="text"
         placeholder="username"
@@ -210,7 +210,6 @@ ul li {
       const messageBtn = document.getElementById("message-button");
       const messageContainer = document.getElementById("message-container");
       const usernameInput = document.getElementById("username-input");
-      
 
       //render server
       const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -219,52 +218,54 @@ ul li {
       );
       //receiving msg
       connection.onopen = () => {
-       connection.onmessage = (message) => {
-    const parsedData = JSON.parse(message.data);
+        connection.onmessage = (message) => {
+          const parsedData = JSON.parse(message.data);
 
-    // 1. Handle the initial load of database history
-    if (parsedData.type === 'history') {
-        const historyArray = parsedData.data;
-        historyArray.forEach(msg => {
+          console.log("Client received data:", parsedData);
+
+          // 1. Handle the initial load of database history
+          if (parsedData.type === "history") {
+            const historyArray = parsedData.data;
+            historyArray.forEach((msg) => {
+              const li = document.createElement("li");
+              // Note: Make sure your DB schema properties match these!
+              li.innerText = `${msg.username} : ${msg.message} [${msg.timestamp}]`;
+              messageContainer.appendChild(li);
+            });
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+          }
+          // 2. Handle a single live chat message coming in
+          else if (parsedData.type === "chat") {
+            const text = parsedData.message;
+            const username = parsedData.username;
             const li = document.createElement("li");
-            // Note: Make sure your DB schema properties match these!
-            li.innerText = `${msg.username} : ${msg.message}`;
+            li.innerText = `${username}:${text}   [${parsedData.timestamp}] `;
             messageContainer.appendChild(li);
-        });
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-    } 
-    // 2. Handle a single live chat message coming in
-    else if (parsedData.type === 'chat') {
-        const text = parsedData.message;
-        const username = parsedData.username;
-
-        const li = document.createElement("li");
-        li.innerText = `${username} : ${text}`;
-        messageContainer.appendChild(li);
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
-};
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+          } else if (parsedData.type === "userCount") {
+            document.getElementById("online-count").innerText =`Online: ${parsedData.count}`;
+          }
+        };
         //Sending msg - sendMessage funtion
         function sendMessage() {
           const textValue = messageInput.value;
           const userValue = usernameInput.value;
+          
 
           // preveting  empty text
           if (!textValue) return;
 
           const dataToSend = {
-            type: 'chat',
-            username: userValue || 'Anonymous',
+            type: "chat",
+            username: userValue || "Anonymous",
             message: textValue,
+            
           };
 
           connection.send(JSON.stringify(dataToSend));
-
           messageInput.value = "";
-
           messageInput.focus();
         }
-
         messageBtn.addEventListener("click", sendMessage);
         messageInput.addEventListener("keypress", (event) => {
           if (event.key === "Enter") {
