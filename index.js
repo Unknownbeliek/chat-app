@@ -5,6 +5,7 @@ import path from 'path'
 import { WebSocketServer } from 'ws'
 import mongoose from 'mongoose'
 import { type } from 'node:os'
+import { parse } from 'node:path'
 
 const PORT = process.env.PORT ?? 9000
 //connecting DB
@@ -30,10 +31,15 @@ const httpServer = http.createServer(async function (req, res) {
 })
 const wsServer = new WebSocketServer({ server: httpServer })
 //broadcast funtion
+// broadcast function
 function broadcastUserCount () {
   const count = wsServer.clients.size
   const data = JSON.stringify({ type: 'userCount', count: count })
-  wsServer.clients.forEach(cleint => cleint.send(data))
+  wsServer.clients.forEach(client => {
+    if (client.readyState === 1) {
+      client.send(data)
+    }
+  })
 }
 wsServer.on('connection', async websocket => {
   broadcastUserCount()
@@ -45,16 +51,19 @@ wsServer.on('connection', async websocket => {
       .limit(50)
       .lean()
 
-      //map history so that timestamp are send
-      const formattedHistory =chatHistory.map(msg=>({
-        username:msg.username,
-        message:msg.message,
-        timestamp:new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit',minute:'2-digit'})
-      }))
+    //map history so that timestamp are send
+    const formattedHistory = chatHistory.map(msg => ({
+      username: msg.username,
+      message: msg.message,
+      timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }))
     websocket.send(
       JSON.stringify({
         type: 'history',
-        data: formattedHistory 
+        data: formattedHistory
       })
     )
   } catch (err) {
@@ -62,6 +71,17 @@ wsServer.on('connection', async websocket => {
   }
   websocket.on('message', async data => {
     const parsedData = JSON.parse(data.toString())
+    if(parsedData.type==='typing'){
+      wsServer.clients.forEach(client=>{
+        if(client !==websocket && client.readyState===1){
+          client.send(JSON.stringify({
+            type: 'typing',
+            username : parsedData.username
+          }));
+        }
+      });
+      return;
+    }
     if (parsedData.type === 'chat') {
       try {
         const newDbMessage = new Message({
@@ -74,7 +94,7 @@ wsServer.on('connection', async websocket => {
       }
     }
     console.log(`websokcet message Recv...`, data.toString())
-    //message to clinet 
+    //message to clinet
     wsServer.clients.forEach(client => {
       console.log('broadcasting msg to client...')
       if (client.readyState === 1) {

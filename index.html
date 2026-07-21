@@ -163,12 +163,17 @@
         border: 2px solid green;
         padding: 10px;
       }
+      #typing-indicator{
+        font-style: italic;
+        color: gray;
+      }
       </style>
   </head>
   <body>
     <h1>Global Chat</h1>
     <div id="online-count"> Online: 0</div>
     <div class="input-wrapper main-container">
+      <div id="typing-indicator"></div>
       <input
         type="text"
         placeholder="username"
@@ -203,20 +208,66 @@
         </svg>
         Send Message
       </button>
+      <button id="enables-sound-btn">🔊 Enable Sound</button>
     </div>
     <script>
       // Selecting Dom elments
-      const messageInput = document.getElementById("message-input");
       const messageBtn = document.getElementById("message-button");
       const messageContainer = document.getElementById("message-container");
+      const messageInput = document.getElementById("message-input");
       const usernameInput = document.getElementById("username-input");
+      const typingIndicator =document.getElementById("typing-indicator");
+      const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      let audioUnlocked = false;
+      let typingTimeout;
+      
+      function getUsernameColor(username){
+        let hash =0;
+        for (let i =0;i<username.length;i++){
+          hash =username.charCodeAt(i)+ ((hash<<5)-hash);
+        }
+        const hue =Math.abs(hash) % 360;
+        return `hsl(${hue},70%,45%)`
+      }
+      //typing
+      messageInput.addEventListener("input",()=>{
+        const userValue=usernameInput.value.trim();
+        if(!userValue)return;
+        connection.send(JSON.stringify({
+          type:"typing",
+          username:userValue
+        }));
+      });
 
-      //render server
+      // color generator
+      // Notification permission unlock on user interaction
+      function unlockAudio(){
+        if(audioUnlocked) return;
+
+        notificationSound.play().then(() => {
+          notificationSound.pause();
+          notificationSound.currentTime = 0;
+          audioUnlocked = true;
+          console.log("Audio permission unlocked successfully");
+          
+          // Clean up listeners once unlocked
+          document.removeEventListener("click", unlockAudio);
+          document.removeEventListener("keydown", unlockAudio);
+        }).catch((err) => {
+          console.log("Waiting for user interaction to unlock audio");
+        });
+      }
+      
+      document.addEventListener("click", unlockAudio);
+      document.addEventListener("keydown", unlockAudio);
+
+      // Render server connection
       const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const connection = new WebSocket(
         `${wsProtocol}//${window.location.host}`,
       );
-      //receiving msg
+
+      // Receiving msg
       connection.onopen = () => {
         connection.onmessage = (message) => {
           const parsedData = JSON.parse(message.data);
@@ -228,8 +279,8 @@
             const historyArray = parsedData.data;
             historyArray.forEach((msg) => {
               const li = document.createElement("li");
-              // Note: Make sure your DB schema properties match these!
-              li.innerText = `${msg.username} : ${msg.message} [${msg.timestamp}]`;
+              const userColor =getUsernameColor(msg.username);
+             li.innerHTML = `<strong style="color: ${userColor};">${msg.username}</strong> : ${msg.message}   [${msg.timestamp}]`;
               messageContainer.appendChild(li);
             });
             messageContainer.scrollTop = messageContainer.scrollHeight;
@@ -238,34 +289,63 @@
           else if (parsedData.type === "chat") {
             const text = parsedData.message;
             const username = parsedData.username;
+            const currentUser = usernameInput.value.trim() || "Anonymous";
             const li = document.createElement("li");
-            li.innerText = `${username}:${text}   [${parsedData.timestamp}] `;
+           li.innerHTML = `<strong style="color: ${userColor};">${msg.username}</strong> : ${msg.message}   [${msg.timestamp}]`;
             messageContainer.appendChild(li);
             messageContainer.scrollTop = messageContainer.scrollHeight;
+
+            // Notification sound check
+            if (username !== currentUser) {
+              notificationSound.currentTime = 0;
+              notificationSound.play().catch(error => {
+                if (error.name === "NotAllowedError") {
+                  console.log("Audio notification paused until user interacts with the page.");
+                } else {
+                  console.log("Audio playback error:", error);
+                }
+              });
+            }
           } else if (parsedData.type === "userCount") {
-            document.getElementById("online-count").innerText =`Online: ${parsedData.count}`;
+            const onlineCountEl = document.getElementById("online-count");
+            if (onlineCountEl) {
+              onlineCountEl.innerText = `Online: ${parsedData.count}`;
+            }
+          }else if(parsedData.type==="typing"){
+              typingIndicator.innerText=`${parsedData.username} is typing....`
+
+              //clear msg of typing
+              clearTimeout(typingTimeout);
+              typingTimeout=setTimeout(()=>{
+                typingIndicator.innerText="";
+              },1000);
           }
         };
-        //Sending msg - sendMessage funtion
+
+        // Sending msg - sendMessage function
         function sendMessage() {
           const textValue = messageInput.value;
           const userValue = usernameInput.value;
-          
 
-          // preveting  empty text
+          if(!userValue){
+            alert('please enter a username before sending a messgae!!');
+            usernameInput.focus()
+            return;
+          }
+          // Preventing empty text
           if (!textValue) return;
 
           const dataToSend = {
             type: "chat",
             username: userValue || "Anonymous",
             message: textValue,
-            
           };
 
           connection.send(JSON.stringify(dataToSend));
           messageInput.value = "";
           messageInput.focus();
         }
+
         messageBtn.addEventListener("click", sendMessage);
         messageInput.addEventListener("keypress", (event) => {
           if (event.key === "Enter") {
