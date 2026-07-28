@@ -290,8 +290,9 @@
             const text = parsedData.message;
             const username = parsedData.username;
             const currentUser = usernameInput.value.trim() || "Anonymous";
+            const userColor =getUsernameColor;
             const li = document.createElement("li");
-           li.innerHTML = `<strong style="color: ${userColor};">${msg.username}</strong> : ${msg.message}   [${msg.timestamp}]`;
+           li.innerHTML = `<strong style="color: ${userColor};">${username}</strong> : ${text}   [${parsedData.timestamp}]`;
             messageContainer.appendChild(li);
             messageContainer.scrollTop = messageContainer.scrollHeight;
 

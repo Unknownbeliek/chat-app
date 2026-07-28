@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { log } from 'node:console'
 import http from 'node:http'
 import fs from 'node:fs/promises'
@@ -10,9 +11,7 @@ import { parse } from 'node:path'
 const PORT = process.env.PORT ?? 9000
 //connecting DB
 mongoose
-  .connect(
-    'mongodb+srv://rajkumarpersonal7_db_user:JJGRgYlOYFSLfPiW@cluster0.trddeud.mongodb.net/?appName=Cluster0'
-  )
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log('connected to MongoDB!'))
   .catch(err => console.log('mongoDB connection error:', err))
 //schema
@@ -30,7 +29,7 @@ const httpServer = http.createServer(async function (req, res) {
   return res.end(indexFile)
 })
 const wsServer = new WebSocketServer({ server: httpServer })
-//broadcast funtion
+
 // broadcast function
 function broadcastUserCount () {
   const count = wsServer.clients.size
