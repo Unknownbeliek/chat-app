@@ -38,14 +38,13 @@ export default function Chat() {
 
   // Connect to WebSocket Server on Component Mount
   useEffect(() => {
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host =
-      window.location.hostname === "localhost"
-        ? "localhost:9000"
-        : window.location.host;
+    // 1. Pick the full URL directly based on where the app is running
+    const wsUrl = window.location.hostname === 'localhost'
+      ? 'ws://localhost:9000'
+      : 'wss://chat-app-m8ua.onrender.com';
 
-    ws.current = new WebSocket(`${wsProtocol}//${host}`);
-
+    // 2. Pass it directly into the WebSocket constructor
+    ws.current = new WebSocket(wsUrl);
     ws.current.onopen = () => {
       console.log("Connected to WebSocket server");
       setIsConnecting(false);
