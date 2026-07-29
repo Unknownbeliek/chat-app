@@ -18,12 +18,17 @@ export default function Chat() {
   const [onlineCount, setOnlineCount] = useState(0);
   const [typingUser, setTypingUser] = useState("");
   const [isConnecting, setIsConnecting] = useState(true);
-  
+
+  const usernameRef = useRef(username);
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
+
   const ws = useRef(null);
   const messageEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const audioRef = useRef(
-    new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3")
+    new Audio("/pop-1.mp3")
   );
 
   // Auto-scroll to bottom on new message
@@ -62,7 +67,7 @@ export default function Chat() {
         setMessages((prev) => [...prev, data]);
 
         // Play sound if message is from another user
-        if (data.username !== username) {
+        if (data.username !== usernameRef.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch(() => {
             console.log("Audio playback requires user interaction first.");
@@ -83,7 +88,7 @@ export default function Chat() {
     return () => {
       ws.current?.close();
     };
-  }, [username]);
+  }, []);
 
   // Handle typing notification
   const handleInputChange = (e) => {
