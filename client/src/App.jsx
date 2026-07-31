@@ -1,47 +1,42 @@
 import React, { useState, useEffect, useRef } from "react";
 
-// Helper function to generate HSL color based on username
 const getUsernameColor = (username) => {
   if (!username) return "hsl(0, 0%, 50%)";
   let hash = 0;
   for (let i = 0; i < username.length; i++) {
     hash = username.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 70%, 65%)`; // Lightened the color slightly for better dark mode contrast
+  return `hsl(${Math.abs(hash) % 360}, 70%, 65%)`; 
 };
 
 export default function Chat() {
-  const [messages, setMessages] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState("Global Chat"); // Default to global
+  
+  // Chat history now stores arrays for private users AND "Global Chat"
+  const [chatHistory, setChatHistory] = useState({ "Global Chat": [] });
   const [inputMessage, setInputMessage] = useState("");
-  const [onlineCount, setOnlineCount] = useState(0);
-  const [typingUser, setTypingUser] = useState("");
   const [isConnecting, setIsConnecting] = useState(true);
-
-  const usernameRef = useRef(username);
-  useEffect(() => {
-    usernameRef.current = username;
-  }, [username]);
-
+  
   const ws = useRef(null);
   const messageEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const audioRef = useRef(
-    new Audio("/pop-1.mp3")
-  );
+  const audioRef = useRef(new Audio("/pop.mp3"));
 
-  // Auto-scroll to bottom on new message
   const scrollToBottom = () => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [chatHistory, selectedUser]);
 
-  // Connect to WebSocket Server on Component Mount
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     const wsUrl = window.location.hostname === "localhost"
       ? "ws://localhost:9000"
       : "wss://chat-app-m8ua.onrender.com";
@@ -51,175 +46,275 @@ export default function Chat() {
     ws.current.onopen = () => {
       console.log("Connected to WebSocket server");
       setIsConnecting(false);
+      ws.current.send(JSON.stringify({
+        type: 'register',
+        username: username.trim()
+      }));
     };
     
     ws.current.onclose = () => {
-      console.log("Disconnected from server");
       setIsConnecting(true);
     };
     
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
       if (data.type === "history") {
-        setMessages(data.data);
-      } else if (data.type === "chat") {
-        setMessages((prev) => [...prev, data]);
-
-        // Play sound if message is from another user
-        if (data.username !== usernameRef.current) {
+        setChatHistory(prev => ({
+          ...prev,
+          "Global Chat": data.data 
+        }));
+      }
+      if (data.type === "userList") {
+        setOnlineUsers(data.users.filter(u => u !== username));
+      } 
+      else if (data.type === "global_chat") {
+        setChatHistory(prev => ({
+          ...prev,
+          "Global Chat": [...(prev["Global Chat"] || []), data]
+        }));
+        
+        if (data.sender !== username) {
           audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(() => {
-            console.log("Audio playback requires user interaction first.");
-          });
+          audioRef.current.play().catch(() => {});
         }
-      } else if (data.type === "userCount") {
-        setOnlineCount(data.count);
-      } else if (data.type === "typing") {
-        setTypingUser(data.username);
+      }
+      else if (data.type === "private_chat") {
+        const chatPartner = data.sender === username ? data.recipient : data.sender;
+        setChatHistory(prev => ({
+          ...prev,
+          [chatPartner]: [...(prev[chatPartner] || []), data]
+        }));
 
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => {
-          setTypingUser("");
-        }, 1200);
+        if (data.sender !== username) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(() => {});
+        }
       }
     };
 
-    return () => {
-      ws.current?.close();
-    };
-  }, []);
+    return () => ws.current?.close();
+  }, [isLoggedIn, username]);
 
-  // Handle typing notification
-  const handleInputChange = (e) => {
-    setInputMessage(e.target.value);
-
-    if (username.trim() && ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(
-        JSON.stringify({
-          type: "typing",
-          username: username.trim(),
-        })
-      );
-    }
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (username.trim() && password.trim()) setIsLoggedIn(true);
   };
 
-  // Send Message
   const sendMessage = () => {
-    if (!username.trim()) {
-      alert("Please enter a username before sending a message!");
-      return;
-    }
-    if (!inputMessage.trim()) return;
-
-    const dataToSend = {
-      type: "chat",
-      username: username.trim(),
-      message: inputMessage.trim(),
-    };
+    if (!inputMessage.trim() || !selectedUser) return;
 
     if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify(dataToSend));
+      if (selectedUser === "Global Chat") {
+        ws.current.send(JSON.stringify({
+          type: "global_chat",
+          message: inputMessage.trim(),
+        }));
+      } else {
+        ws.current.send(JSON.stringify({
+          type: "private_chat",
+          recipient: selectedUser,
+          message: inputMessage.trim(),
+        }));
+      }
       setInputMessage("");
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") sendMessage();
-  };
-
   // ---------------- RENDERING ----------------
 
-  if (isConnecting) {
+  if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-gray-200 font-sans p-4">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-        <h2 className="text-2xl font-bold mb-2">Waking up the server... 😴</h2>
-        <p className="text-gray-400 text-center max-w-md">
-          Because we are using a free hosting tier, it might take up to 50 seconds for the server to wake up. Please hang tight!
-        </p>
+      <div className="relative min-h-screen flex items-center justify-center p-4 font-sans select-none overflow-hidden">
+        {/* Decorative background blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="blob blob-1 absolute -top-40 -left-40 w-96 h-96 rounded-full bg-purple-600/40 blur-3xl" />
+          <div className="blob blob-2 absolute top-1/2 -right-40 w-80 h-80 rounded-full bg-blue-500/30 blur-3xl" />
+          <div className="blob blob-3 absolute -bottom-40 left-1/3 w-96 h-96 rounded-full bg-emerald-500/20 blur-3xl" />
+        </div>
+
+        <div className="w-full max-w-sm bg-white/10 backdrop-blur-xl border border-white/15 rounded-3xl shadow-2xl p-10">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-br from-purple-300 via-pink-300 to-indigo-400 bg-clip-text text-transparent mb-1">
+              Ping
+            </h1>
+            <p className="text-sm text-white/50">Sign in to continue chatting</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-white/8 backdrop-blur-sm border border-white/15 text-white placeholder-white/30 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400/50 transition-all duration-200"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-white/8 backdrop-blur-sm border border-white/15 text-white placeholder-white/30 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400/50 transition-all duration-200"
+            />
+            <button
+              type="submit"
+              className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-[0.98] text-white font-semibold py-3 rounded-2xl transition-all duration-200 shadow-lg shadow-indigo-500/30 text-sm cursor-pointer"
+            >
+              Join Chat
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4 font-sans">
-      
-      {/* Main Chat App Card */}
-      <div className="w-full max-w-3xl bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl flex flex-col h-[85vh]">
-        
-        {/* Header Section */}
-        <header className="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-900/50 rounded-t-2xl">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
-            Global Chat
-          </h2>
-          <div className="flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-full border border-gray-700 shadow-inner">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span className="text-sm font-medium text-gray-200">
-              {onlineCount} Online
-            </span>
-          </div>
-        </header>
-
-        {/* Username Input Area */}
-        <div className="px-5 py-4 border-b border-gray-800 bg-gray-900">
-          <input
-            type="text"
-            placeholder="Choose your username..."
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent p-3 outline-none transition-all shadow-inner"
-          />
+  if (isConnecting) {
+    return (
+      <div className="relative min-h-screen flex flex-col items-center justify-center gap-5 text-white select-none overflow-hidden">
+        {/* Decorative background blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="blob blob-1 absolute -top-40 -left-40 w-96 h-96 rounded-full bg-purple-600/40 blur-3xl" />
+          <div className="blob blob-2 absolute top-1/2 -right-40 w-80 h-80 rounded-full bg-blue-500/30 blur-3xl" />
         </div>
 
-        {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 scroll-smooth">
-          {messages.map((msg, index) => (
-            <div key={index} className="flex flex-col animate-fade-in-up">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span 
-                  className="font-bold text-sm tracking-wide" 
-                  style={{ color: getUsernameColor(msg.username) }}
+        <div className="w-11 h-11 rounded-full border-4 border-white/20 border-t-purple-400 animate-spin"></div>
+        <h2 className="text-lg font-semibold text-white/70 tracking-wide">Connecting to server...</h2>
+      </div>
+    );
+  }
+
+  const currentMessages = chatHistory[selectedUser] || [];
+
+  return (
+    <div className="relative min-h-screen flex items-center justify-center p-4 font-sans overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="blob blob-1 absolute -top-40 -left-40 w-96 h-96 rounded-full bg-purple-600/40 blur-3xl" />
+        <div className="blob blob-2 absolute top-1/2 -right-40 w-80 h-80 rounded-full bg-blue-500/30 blur-3xl" />
+        <div className="blob blob-3 absolute -bottom-40 left-1/3 w-96 h-96 rounded-full bg-emerald-500/20 blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-5xl h-[90vh] bg-black/20 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl flex overflow-hidden">
+        
+        {/* SIDEBAR: Online Users */}
+        <div className="w-72 shrink-0 border-r border-white/10 flex flex-col bg-black/20">
+          <div className="px-5 py-5 border-b border-white/10">
+            <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-400 shadow-sm shadow-purple-400/80"></span>
+              Ping
+            </h2>
+            <p className="text-xs text-white/40 mt-0.5">Logged in as <span className="font-medium text-white/70">{username}</span></p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-1 chat-scroll">
+            
+            {/* Dedicated Global Chat Button */}
+            <button
+              onClick={() => setSelectedUser("Global Chat")}
+              className={`w-full text-left px-3 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-3 font-semibold text-sm cursor-pointer ${
+                selectedUser === "Global Chat"
+                  ? 'bg-violet-500/25 text-purple-200 border border-violet-400/40 shadow-sm shadow-violet-500/20'
+                  : 'hover:bg-white/8 text-purple-300/80'
+              }`}
+            >
+              <span className="text-base">🌍</span> Global Chat
+            </button>
+
+            <div className="my-3 mx-2 border-t border-white/10"></div>
+            
+            <h3 className="px-3 mb-2 text-[10px] font-bold text-white/30 uppercase tracking-widest">Online Contacts</h3>
+            
+            {onlineUsers.length === 0 ? (
+              <p className="px-3 text-xs text-white/25 italic">Waiting for others...</p>
+            ) : (
+              onlineUsers.map(user => (
+                <button
+                  key={user}
+                  onClick={() => setSelectedUser(user)}
+                  className={`w-full text-left px-3 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-3 text-sm cursor-pointer ${
+                    selectedUser === user
+                      ? 'bg-indigo-500/25 text-white border border-indigo-400/40 shadow-sm shadow-indigo-500/20'
+                      : 'hover:bg-white/8 text-white/70'
+                  }`}
                 >
-                  {msg.username}
-                </span>
-                <span className="text-xs text-gray-500 font-medium">
-                  {msg.timestamp}
-                </span>
-              </div>
-              <p className="text-gray-200 text-[15px] leading-relaxed break-words bg-gray-800/40 p-3 rounded-r-xl rounded-bl-xl border border-gray-700/50 inline-block max-w-[90%]">
-                {msg.message}
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0 shadow-sm shadow-emerald-400/80"></span>
+                  <span className="truncate">{user}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* MAIN CHAT AREA */}
+        <div className="flex-1 flex flex-col bg-transparent min-w-0">
+          <header className="px-6 py-4 border-b border-white/10 flex items-center gap-3 shrink-0 bg-white/5 backdrop-blur-sm">
+            {selectedUser !== "Global Chat" && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/60"></span>
+            )}
+            <div>
+              <h2 className="font-semibold text-white text-base leading-tight">
+                {selectedUser === "Global Chat" ? "🌍 Global Public Chat" : selectedUser}
+              </h2>
+              <p className={`text-xs mt-0.5 ${selectedUser === "Global Chat" ? 'text-white/40' : 'text-emerald-400/80'}`}>
+                {selectedUser === "Global Chat" ? "Public channel · Everyone can see messages" : "Direct Message · Private 1-on-1"}
               </p>
             </div>
-          ))}
-          <div ref={messageEndRef} />
-        </div>
+          </header>
 
-        {/* Typing Indicator */}
-        <div className="h-8 px-5 flex items-center bg-gray-900 border-t border-gray-800/50">
-          <span className="text-xs font-medium text-gray-500 italic transition-opacity duration-300">
-            {typingUser ? `${typingUser} is typing...` : ""}
-          </span>
-        </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 chat-scroll">
+            {currentMessages.length === 0 && (
+              <div className="flex flex-col justify-center items-center h-full text-white/20 gap-2 select-none">
+                <span className="text-3xl opacity-50">💬</span>
+                <p className="text-sm">No messages yet. Say hello!</p>
+              </div>
+            )}
+            
+            {currentMessages.map((msg, index) => {
+              const isMe = msg.sender === username;
+              return (
+                <div key={index} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} msg-enter`}>
+                  
+                  {/* Show who sent the message if we are in Global Chat */}
+                  {selectedUser === "Global Chat" && !isMe && (
+                    <span 
+                      className="text-[11px] font-bold mb-1 px-1" 
+                      style={{ color: getUsernameColor(msg.sender) }}
+                    >
+                      {msg.sender}
+                    </span>
+                  )}
 
-        {/* Message Input & Send Button */}
-        <div className="p-4 bg-gray-900 border-t border-gray-800 flex gap-3 rounded-b-2xl">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={inputMessage}
-            onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
-            className="flex-1 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent p-4 outline-none transition-all shadow-inner"
-          />
-          <button
-            onClick={sendMessage}
-            className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center"
-          >
-            Send
-          </button>
+                  <span className="text-[10px] text-white/30 mb-1 px-1">{msg.timestamp}</span>
+                  <p className={`text-sm leading-relaxed break-words px-4 py-2.5 max-w-[75%] ${
+                    isMe
+                      ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-l-2xl rounded-tr-2xl shadow-lg shadow-indigo-700/40'
+                      : 'bg-white/10 backdrop-blur-md text-white/90 rounded-r-2xl rounded-bl-2xl border border-white/15'
+                  }`}>
+                    {msg.message}
+                  </p>
+                </div>
+              );
+            })}
+            <div ref={messageEndRef} />
+          </div>
+
+          <div className="px-4 py-4 border-t border-white/10 shrink-0 bg-white/5 backdrop-blur-sm">
+            <div className="flex items-center gap-2 bg-white/8 backdrop-blur-md border border-white/15 rounded-2xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-purple-400/50 focus-within:border-purple-400/40 transition-all duration-200">
+              <input
+                type="text"
+                placeholder={`Message ${selectedUser}...`}
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                className="flex-1 bg-transparent text-white placeholder-white/30 text-sm px-3 py-2 outline-none"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!inputMessage.trim()}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white text-sm font-semibold px-5 py-2 rounded-xl transition-all duration-150 ease-out shadow-md shadow-indigo-600/40 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
-        
       </div>
     </div>
   );

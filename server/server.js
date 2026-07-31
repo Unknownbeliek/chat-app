@@ -24,34 +24,34 @@ mongoose
 const messageSchema = new mongoose.Schema({
   username: String,
   message: String,
+  type: { type: String, default: 'global_chat' },
   timestamp: { type: Date, default: Date.now }
 });
-
 const Message = mongoose.model('Message', messageSchema);
 
-// Express HTTP Server wrapped for WebSocket support
+// Create HTTP and WebSocket Server (Defined BEFORE using it!)
 const server = http.createServer(app);
-const wsServer = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server }); 
 
-// Broadcast online user count
-function broadcastUserCount() {
-  const count = wsServer.clients.size;
-  const data = JSON.stringify({ type: 'userCount', count });
-  wsServer.clients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(data);
+const activeUsers = new Map(); // Tracks who is online
+
+// Helper to broadcast to all connected clients
+function broadcast(data) {
+  const payload = JSON.stringify(data); // Fixed typo here
+  wss.clients.forEach((clientWs) => {
+    if (clientWs.readyState === 1) { // WebSocket.OPEN
+      clientWs.send(payload); 
     }
   });
 }
 
-// WebSocket Connection Logic
-wsServer.on('connection', async (websocket) => {
-  broadcastUserCount();
-  websocket.on('close', () => broadcastUserCount());
-
+// SINGLE Consolidated WebSocket Connection Logic
+wss.on('connection', async (ws) => {
+  let currentUsername = null;
   console.log('WebSocket Client Connected');
 
-  // Load chat history from DB
+
+  // Load Global Chat history from DB on connect
   try {
     const chatHistory = await Message.find()
       .sort({ timestamp: 1 })
@@ -59,72 +59,112 @@ wsServer.on('connection', async (websocket) => {
       .lean();
 
     const formattedHistory = chatHistory.map(msg => ({
-      username: msg.username,
+      type: 'global_chat',
+      sender: msg.username,
       message: msg.message,
-      timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }));
 
-    websocket.send(
-      JSON.stringify({
-        type: 'history',
-        data: formattedHistory
-      })
-    );
+    // Send history only to the newly connected user
+    ws.send(JSON.stringify({ type: 'history', data: formattedHistory }));
   } catch (err) {
-    console.error('Error fetching History', err);
+    console.error('Error fetching History:', err);
   }
 
   // Handle incoming messages
-  websocket.on('message', async (data) => {
-    const parsedData = JSON.parse(data.toString());
+  ws.on('message', async (message) => {
+    const data = JSON.parse(message.toString());
 
-    // 1. Handle Typing Status
-    if (parsedData.type === 'typing') {
-      wsServer.clients.forEach(client => {
-        if (client !== websocket && client.readyState === 1) {
-          client.send(
-            JSON.stringify({
-              type: 'typing',
-              username: parsedData.username
-            })
-          );
-        }
+    // 1. User Registration (Login)
+    if (data.type === 'register') {
+      currentUsername = data.username;
+      activeUsers.set(currentUsername, ws);
+      
+      // Tell everyone the new user list
+      broadcast({
+        type: 'userList',
+        users: Array.from(activeUsers.keys())
       });
-      return;
     }
+    
+    // 2. Private 1-to-1 Chat (Not saved to DB for privacy)
+    else if (data.type === 'private_chat') {
+      const { recipient, message: text } = data;
+      const recipientWs = activeUsers.get(recipient);
 
-    // 2. Handle Live Chat
-    if (parsedData.type === 'chat') {
+      const payload = JSON.stringify({
+        type: 'private_chat',
+        sender: currentUsername,
+        recipient: recipient,
+        message: text, 
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      // Send to recipient
+      if (recipientWs && recipientWs.readyState === ws.OPEN) {
+        recipientWs.send(payload);
+      }
+      // Send back to sender so they can see their own message
+      if (ws.readyState === ws.OPEN && recipient !== currentUsername) {
+        ws.send(payload);
+      }
+    }
+    
+    // 3. Global Public Chat
+    else if (data.type === 'global_chat') {
+      // Save global message to MongoDB
       try {
         const newDbMessage = new Message({
-          username: parsedData.username || 'Anonymous',
-          message: parsedData.message
+          username: currentUsername || 'Anonymous',
+          message: data.message, 
+          type: 'global_chat'
         });
         await newDbMessage.save();
       } catch (err) {
         console.error('Error saving message:', err);
       }
 
-      const broadcastMsg = JSON.stringify({
-        type: 'chat',
-        username: parsedData.username,
-        message: parsedData.message,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      });
-
-      wsServer.clients.forEach(client => {
-        if (client.readyState === 1) {
-          client.send(broadcastMsg);
-        }
+      // Broadcast global message to everyone
+      broadcast({
+        type: 'global_chat',
+        sender: currentUsername,
+        message: data.message, 
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
     }
   });
+
+  // Handle Disconnect
+  ws.on('close', () => {
+    if (currentUsername) {
+      if(currentUsername){
+          activeUsers.delete(currentUsername);
+      }
+     
+      
+      // Update everyone's sidebar when someone leaves
+      broadcast({
+        type: 'userList',
+        users: Array.from(activeUsers.keys())
+      });
+    }
+    console.log('WebSocket Client Disconnected');
+  });
+  try{
+    const chatHistory = await Message.find()
+    .sort({timestamp:1})
+    .limit(50)
+    .lean();
+    const formattedHistory =chatHistory.map(msg=>({
+      type:'global_chat',
+      sender:msg.username,
+      message:msg.message,
+      timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }));
+    ws.send(JSON.stringify({ type: 'history', data: formattedHistory }));
+  }catch(err){
+    console.error('Error Fetching history',err);
+  }
 });
 
 server.listen(PORT, () => {
