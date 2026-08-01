@@ -36,9 +36,6 @@ export default function PingSidebar({
             </span>
           </div>
         </div>
-        <span className="text-xs text-zinc-400 font-mono bg-white/5 px-2 py-1 rounded-md border border-white/5">
-          v1.0
-        </span>
       </div>
 
       {/* Search Input */}

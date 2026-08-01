@@ -18,7 +18,26 @@ export default function Chat() {
   const [selectedUser, setSelectedUser] = useState("Global Chat");
   const [inputMessage, setInputMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isOffTheRecord, setIsOffTheRecord] = useState(false);
+  const [otrStates, setOtrStates] = useState({}); // { username_lowercase: boolean }
+
+  const isOffTheRecord = selectedUser !== "Global Chat" && !!otrStates[selectedUser.toLowerCase()];
+
+  const handleToggleOtr = (val) => {
+    if (!selectedUser || selectedUser === "Global Chat") return;
+    const targetKey = selectedUser.toLowerCase();
+    const newStatus = typeof val === 'boolean' ? val : !otrStates[targetKey];
+    setOtrStates(prev => ({ ...prev, [targetKey]: newStatus }));
+    sendMessage('otr_toggle', {
+      sender: username,
+      recipient: selectedUser,
+      enabled: newStatus
+    });
+  };
+
+  const handleOtrToggleFromPeer = useCallback((sender, enabled) => {
+    if (!sender) return;
+    setOtrStates(prev => ({ ...prev, [sender.toLowerCase()]: !!enabled }));
+  }, []);
 
   // Profile State
   const [profile, setProfile] = useState({
@@ -87,7 +106,8 @@ export default function Chat() {
     username,
     isLoggedIn,
     getWsUrl,
-    onNotification: handleNotification
+    onNotification: handleNotification,
+    onOtrToggle: handleOtrToggleFromPeer
   });
 
   // Check stored user session on load
@@ -376,7 +396,7 @@ export default function Chat() {
               setInputMessage={setInputMessage}
               onSendMessage={handleSendMessage}
               isOffTheRecord={isOffTheRecord}
-              setIsOffTheRecord={setIsOffTheRecord}
+              setIsOffTheRecord={handleToggleOtr}
               typingUsers={typingUsers}
               onTyping={(currentWpm) => {
                 sendMessage('typing_wpm', {

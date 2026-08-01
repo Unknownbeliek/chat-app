@@ -454,16 +454,38 @@ wss.on('connection', async (ws) => {
           handlePingBotQuery(query, "Global Chat", senderName, true);
         }
       }
+
+      // 6. OTR Mode Toggle Sync Broadcast
+      else if (data.type === 'otr_toggle') {
+        const { recipient, enabled } = data;
+        const senderName = currentUsername || data.sender;
+        if (!recipient || !senderName) return;
+
+        const targetUser = activeUsers.get(recipient.toLowerCase());
+        if (targetUser && targetUser.ws.readyState === 1) {
+          targetUser.ws.send(JSON.stringify({
+            type: 'otr_toggle',
+            sender: senderName,
+            recipient: recipient,
+            enabled: !!enabled
+          }));
+        }
+      }
     } catch (err) {
       console.error('WS message error:', err);
     }
   });
 
-  // Handle Disconnect
+  // Handle Disconnect (Race Condition Guard)
   ws.on('close', async () => {
     if (currentUsername) {
-      activeUsers.delete(currentUsername.toLowerCase());
-      await broadcastUserList();
+      const lowerKey = currentUsername.toLowerCase();
+      const existing = activeUsers.get(lowerKey);
+      // Only delete if the closing socket matches the active socket instance
+      if (existing && existing.ws === ws) {
+        activeUsers.delete(lowerKey);
+        await broadcastUserList();
+      }
     }
     console.log('WebSocket Client Disconnected');
   });

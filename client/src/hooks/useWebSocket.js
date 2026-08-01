@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification }) {
+export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, onOtrToggle }) {
   const [isConnecting, setIsConnecting] = useState(true);
   const [onlineCount, setOnlineCount] = useState(1);
   const [registeredUsers, setRegisteredUsers] = useState([]);
@@ -104,6 +104,12 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification })
                   return copy;
                 });
               }, 2500);
+            }
+            break;
+
+          case 'otr_toggle':
+            if (data.sender && onOtrToggle) {
+              onOtrToggle(data.sender, data.enabled);
             }
             break;
 
