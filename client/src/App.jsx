@@ -398,6 +398,7 @@ export default function Chat() {
               isOffTheRecord={isOffTheRecord}
               setIsOffTheRecord={handleToggleOtr}
               typingUsers={typingUsers}
+              isConnecting={isConnecting}
               onTyping={(currentWpm) => {
                 sendMessage('typing_wpm', {
                   sender: username,
