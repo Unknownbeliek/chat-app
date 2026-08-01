@@ -1,38 +1,124 @@
 @import "tailwindcss";
 
 * {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* === Animated mesh gradient background === */
+/* === Glassmorphism Animated Mesh Background === */
 body {
-  background-color: #0f0a1e;
-  background-image:
-    radial-gradient(ellipse at 20% 10%, rgba(99, 66, 230, 0.45) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 90%, rgba(16, 185, 129, 0.25) 0%, transparent 55%),
-    radial-gradient(ellipse at 70% 10%, rgba(236, 72, 153, 0.30) 0%, transparent 50%),
-    radial-gradient(ellipse at 10% 80%, rgba(59, 130, 246, 0.25) 0%, transparent 55%);
+  background: #0d0b18;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.25) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.25) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+  background-attachment: fixed;
   min-height: 100vh;
+  color: #f4f4f5;
+  overflow-x: hidden;
 }
 
-/* === Animated floating blobs === */
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(30px, -40px) scale(1.05); }
-  66%       { transform: translate(-20px, 20px) scale(0.95); }
+/* === Floating Glow Blobs === */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 0;
 }
-.blob { animation: blob 9s ease-in-out infinite; will-change: transform; }
-.blob-2 { animation-delay: -3s; }
-.blob-3 { animation-delay: -6s; }
+.blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 450px;
+  height: 450px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  animation: floatBlob 14s ease-in-out infinite alternate;
+}
+.blob-2 {
+  bottom: -15%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  animation: floatBlob 18s ease-in-out infinite alternate-reverse;
+}
+.blob-3 {
+  top: 40%;
+  left: 30%;
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  animation: floatBlob 16s ease-in-out infinite alternate;
+}
 
-/* === Glass scrollbar === */
-.chat-scroll::-webkit-scrollbar { width: 4px; }
-.chat-scroll::-webkit-scrollbar-track { background: transparent; }
-.chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 99px; }
+@keyframes floatBlob {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -50px) scale(1.1); }
+  100% { transform: translate(-30px, 30px) scale(0.95); }
+}
 
-/* === Message entry animation === */
+/* === Glassmorphism Components === */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header {
+  background: rgba(18, 16, 32, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-input {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* === Custom Glass Scrollbar === */
+.chat-scroll::-webkit-scrollbar { 
+  width: 5px; 
+}
+.chat-scroll::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+.chat-scroll::-webkit-scrollbar-thumb { 
+  background: rgba(168, 85, 247, 0.25); 
+  border-radius: 99px; 
+}
+.chat-scroll::-webkit-scrollbar-thumb:hover { 
+  background: rgba(168, 85, 247, 0.5); 
+}
+
+/* === Message Entry Animation === */
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { 
+    opacity: 0; 
+    transform: translateY(10px) scale(0.98); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
 }
-.msg-enter { animation: fadeSlideUp 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+.msg-enter { 
+  animation: fadeSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+}
+
+/* === Telegram Tab & View Sliding Transitions === */
+.view-slide-enter {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+}
