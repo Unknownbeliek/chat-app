@@ -42,18 +42,23 @@ export default function Chat() {
   const audioRef = useRef(new Audio("/pop-1.mp3"));
 
   const getApiUrl = useCallback(() => {
+    if (import.meta.env.VITE_SERVER_URL) {
+      return import.meta.env.VITE_SERVER_URL;
+    }
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
       return "http://localhost:9000";
     }
-    return window.location.protocol + "//" + window.location.host;
+    return "https://chat-app-m8ua.onrender.com";
   }, []);
 
   const getWsUrl = useCallback(() => {
+    if (import.meta.env.VITE_WS_URL) {
+      return import.meta.env.VITE_WS_URL;
+    }
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
       return "ws://localhost:9000";
     }
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.host}`;
+    return "wss://chat-app-m8ua.onrender.com";
   }, []);
 
   const handleNotification = useCallback((title, body) => {
