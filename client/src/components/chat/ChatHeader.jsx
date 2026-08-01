@@ -1,4 +1,5 @@
 import React from 'react';
+import { EyeOff, ChevronLeft } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import StatusBadge from '../common/StatusBadge';
 
@@ -18,9 +19,10 @@ export default function ChatHeader({
         {/* Mobile Back Button */}
         <button
           onClick={onBackToSidebar}
-          className="md:hidden p-2 -ml-1 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-sm flex items-center gap-1"
+          className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold shadow-sm transition-all active:scale-95 group -ml-1"
         >
-          ← <span className="text-xs">Contacts</span>
+          <ChevronLeft className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400 transform group-hover:-translate-x-0.5 transition-transform" />
+          <span>Contacts</span>
         </button>
 
         <Avatar
@@ -59,7 +61,7 @@ export default function ChatHeader({
           }`}
           title={isOffTheRecord ? "Off-the-Record active (messages will not be saved)" : "Toggle Off-the-Record mode"}
         >
-          <span>🕵️</span>
+          <EyeOff className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{isOffTheRecord ? "OTR Active" : "OTR Mode"}</span>
         </button>
       )}

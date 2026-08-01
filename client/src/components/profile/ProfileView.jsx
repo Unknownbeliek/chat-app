@@ -1,4 +1,5 @@
 import React from 'react';
+import { MapPin, ChevronLeft } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import StatusBadge from '../common/StatusBadge';
 
@@ -23,9 +24,10 @@ export default function ProfileView({
         <div className="flex items-center gap-3">
           <button
             onClick={onBackToChats}
-            className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-sm"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold shadow-sm transition-all active:scale-95 group"
           >
-            ← Back to Chat
+            <ChevronLeft className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400 transform group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Chat</span>
           </button>
           <h2 className="font-bold text-lg text-zinc-100">User Profile</h2>
         </div>
@@ -48,7 +50,10 @@ export default function ProfileView({
             <p className="text-xs text-indigo-400 font-medium mb-1">{profile.status}</p>
             <p className="text-xs text-zinc-400">{profile.bio}</p>
             {profile.location && (
-              <p className="text-[11px] text-zinc-500 mt-2">📍 {profile.location}</p>
+              <p className="text-[11px] text-zinc-500 mt-2 flex items-center justify-center sm:justify-start gap-1">
+                <MapPin className="w-3 h-3 text-zinc-400" />
+                <span>{profile.location}</span>
+              </p>
             )}
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Search } from 'lucide-react';
 import ContactItem from './ContactItem';
 import NavigationBar from './NavigationBar';
 
@@ -48,13 +49,13 @@ export default function PingSidebar({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full glass-input px-3.5 py-2 pl-9 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 transition-all"
           />
-          <span className="absolute left-3 top-2.5 text-zinc-500 text-xs">🔍</span>
+          <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-500" />
         </div>
       </div>
 
       {/* Channel / Contact List */}
       <div className="flex-1 overflow-y-auto chat-scroll p-2 space-y-1">
-        {/* Global Chat Item */}
+        {/* Global Chat Item (Always available) */}
         <ContactItem
           name="Global Chat"
           isOnline={true}
@@ -64,22 +65,53 @@ export default function PingSidebar({
           bio="Public global chat channel"
         />
 
-        <div className="px-3 pt-3 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-          Direct Messages ({filteredUsers.length})
+        {/* Section Header */}
+        <div className="px-3 pt-3 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+          <span>{activeTab === "chats" ? "Active Chats" : "All Contacts"}</span>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            {activeTab === "chats"
+              ? filteredUsers.filter(u => chatHistory[u.username] && chatHistory[u.username].length > 0).length
+              : filteredUsers.length}
+          </span>
         </div>
 
-        {filteredUsers.map((u) => (
-          <ContactItem
-            key={u._id || u.username}
-            name={u.username}
-            isOnline={u.isOnline}
-            isSelected={selectedUser === u.username}
-            onClick={() => onSelectContact(u.username)}
-            lastMessage={getLastMsg(u.username)}
-            bio={u.bio}
-            avatarColor={u.avatarColor}
-          />
-        ))}
+        {/* User Items */}
+        {filteredUsers
+          .filter(u => {
+            if (activeTab === "chats") {
+              // In Chats tab, only show users with active history
+              const hasHistory = chatHistory[u.username] && chatHistory[u.username].length > 0;
+              return hasHistory;
+            }
+            // In Contacts tab, show all registered users
+            return true;
+          })
+          .map((u) => (
+            <ContactItem
+              key={u._id || u.username}
+              name={u.username}
+              isOnline={u.isOnline}
+              isSelected={selectedUser === u.username}
+              onClick={() => onSelectContact(u.username)}
+              lastMessage={getLastMsg(u.username)}
+              bio={u.bio}
+              avatarColor={u.avatarColor}
+            />
+          ))}
+
+        {/* Empty state for Chats tab when no active DMs exist */}
+        {activeTab === "chats" &&
+          filteredUsers.filter(u => chatHistory[u.username] && chatHistory[u.username].length > 0).length === 0 && (
+            <div className="p-4 text-center text-xs text-zinc-500 space-y-1">
+              <p>No active direct chats yet.</p>
+              <button
+                onClick={() => setActiveTab("contacts")}
+                className="text-indigo-400 font-medium hover:underline cursor-pointer"
+              >
+                Explore Contacts →
+              </button>
+            </div>
+          )}
       </div>
 
       {/* Floating Bottom Navigation Tabs */}

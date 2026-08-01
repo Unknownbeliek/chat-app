@@ -1,17 +1,19 @@
 import React from 'react';
+import { MessageSquare, Users, User, Settings } from 'lucide-react';
 
 export default function NavigationBar({ activeTab, setActiveTab, unreadCount = 0 }) {
   const tabs = [
-    { id: "chats", label: "Chats", icon: "💬", badge: unreadCount },
-    { id: "contacts", label: "Contacts", icon: "👥" },
-    { id: "profile", label: "Profile", icon: "👤" },
-    { id: "settings", label: "Settings", icon: "⚙️" },
+    { id: "chats", label: "Chats", Icon: MessageSquare, badge: unreadCount },
+    { id: "contacts", label: "Contacts", Icon: Users },
+    { id: "profile", label: "Profile", Icon: User },
+    { id: "settings", label: "Settings", Icon: Settings },
   ];
 
   return (
     <nav className="glass-header px-3 py-2 border-t border-white/10 flex items-center justify-around">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
+        const IconComponent = tab.Icon;
         return (
           <button
             key={tab.id}
@@ -22,7 +24,7 @@ export default function NavigationBar({ activeTab, setActiveTab, unreadCount = 0
                 : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
             }`}
           >
-            <span className="text-lg leading-none">{tab.icon}</span>
+            <IconComponent className="w-5 h-5 stroke-[1.75]" />
             <span className="text-[10px] font-medium">{tab.label}</span>
             {tab.badge > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow-lg">
