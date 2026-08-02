@@ -10,20 +10,24 @@ export default function ChatHeader({
   targetUserInfo,
   isOffTheRecord,
   setIsOffTheRecord,
-  onStartCall
+  onStartCall,
+  callState
 }) {
   const isGlobal = selectedUser === "Global Chat";
+
+  const isInCallWithUser = !isGlobal && callState && callState.status !== 'idle' && callState.partnerName?.toLowerCase() === selectedUser?.toLowerCase();
+  const userCallStatus = isInCallWithUser ? (callState.status === 'ringing' ? 'calling' : 'in_call') : null;
 
   return (
     <div className="glass-header px-4 py-3 border-b border-white/10 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        {/* Mobile Back Button */}
+        {/* Mobile Back Button (Clean Icon-Only) */}
         <button
           onClick={onBackToSidebar}
-          className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold shadow-sm transition-all active:scale-95 group -ml-1"
+          className="md:hidden p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 shadow-sm transition-all active:scale-95 group -ml-1 flex items-center justify-center"
+          title="Back to Contacts"
         >
-          <ChevronLeft className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400 transform group-hover:-translate-x-0.5 transition-transform" />
-          <span>Contacts</span>
+          <ChevronLeft className="w-5 h-5 text-zinc-300 group-hover:text-indigo-400 transform group-hover:-translate-x-0.5 transition-transform" />
         </button>
 
         <Avatar
@@ -40,7 +44,7 @@ export default function ChatHeader({
             {isGlobal ? (
               <StatusBadge isOnline={true} label={`${onlineCount} Online`} />
             ) : (
-              <StatusBadge isOnline={targetUserInfo?.isOnline} />
+              <StatusBadge isOnline={targetUserInfo?.isOnline} status={userCallStatus} />
             )}
           </div>
           <p className="text-xs text-zinc-400">

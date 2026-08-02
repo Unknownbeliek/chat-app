@@ -19,6 +19,14 @@ export function useWebRTC({ sendSignal }) {
 
   // Initialize or retrieve media devices
   const getMedia = useCallback(async (callType) => {
+    // If stream already exists and has required live tracks, reuse it
+    if (localStreamRef.current && localStreamRef.current.active) {
+      const liveVideoTracks = localStreamRef.current.getVideoTracks().filter(t => t.readyState === 'live');
+      if (callType === 'video' ? liveVideoTracks.length > 0 : true) {
+        return localStreamRef.current;
+      }
+    }
+
     try {
       const constraints = {
         audio: true,
@@ -73,10 +81,10 @@ export function useWebRTC({ sendSignal }) {
       }
     };
 
-    // Remote Track handler
+    // Remote Track handler — clone stream tracks to force React state update on new track addition
     pc.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
-        setRemoteStream(event.streams[0]);
+        setRemoteStream(new MediaStream(event.streams[0].getTracks()));
       }
     };
 
@@ -88,7 +96,7 @@ export function useWebRTC({ sendSignal }) {
   }, [sendSignal]);
 
   // Initiate call as Caller (Create Offer)
-  const createOffer = useCallback(async (targetUser, roomId, stream) => {
+  const createOffer = useCallback(async (targetUser, roomId, stream, callType) => {
     const pc = initPeerConnection(targetUser, roomId, stream);
     try {
       const offer = await pc.createOffer();
@@ -98,6 +106,7 @@ export function useWebRTC({ sendSignal }) {
         type: 'sdp_offer',
         to: targetUser,
         roomId,
+        callType,
         sdp: offer
       });
     } catch (err) {
@@ -106,7 +115,7 @@ export function useWebRTC({ sendSignal }) {
   }, [initPeerConnection, sendSignal]);
 
   // Handle incoming Offer as Callee (Create Answer)
-  const handleOffer = useCallback(async (fromUser, roomId, offerSdp, stream) => {
+  const handleOffer = useCallback(async (fromUser, roomId, offerSdp, stream, callType) => {
     const pc = initPeerConnection(fromUser, roomId, stream);
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
@@ -117,6 +126,7 @@ export function useWebRTC({ sendSignal }) {
         type: 'sdp_answer',
         to: fromUser,
         roomId,
+        callType,
         sdp: answer
       });
     } catch (err) {

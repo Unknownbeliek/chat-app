@@ -5,6 +5,7 @@ import ChatWindow from "./components/chat/ChatWindow";
 import ProfileView from "./components/profile/ProfileView";
 import SettingsView from "./components/settings/SettingsView";
 import ConfirmModal from "./components/common/ConfirmModal";
+import NotificationPermissionModal from "./components/common/NotificationPermissionModal";
 import CallModal from "./components/calling/CallModal";
 import CallScreen from "./components/calling/CallScreen";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -57,6 +58,38 @@ export default function Chat() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Notification Permission Onboarding State & Handlers
+  const [showNotifModal, setShowNotifModal] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const prompted = localStorage.getItem("ping_notif_prompted");
+      if (!prompted && typeof Notification !== "undefined" && Notification.permission === "default") {
+        setShowNotifModal(true);
+      }
+    }
+  }, [isLoggedIn]);
+
+  const handleEnableNotif = async () => {
+    setShowNotifModal(false);
+    localStorage.setItem("ping_notif_prompted", "true");
+    if (typeof Notification !== "undefined") {
+      try {
+        const res = await Notification.requestPermission();
+        if (res === 'granted') {
+          setNotificationsEnabled(true);
+        }
+      } catch (err) {
+        console.error('Notification permission error:', err);
+      }
+    }
+  };
+
+  const handleSkipNotif = () => {
+    setShowNotifModal(false);
+    localStorage.setItem("ping_notif_prompted", "true");
+  };
 
   // Layout Tab Navigation: "chats" | "contacts" | "settings" | "profile" | "chat"
   const [activeTab, setActiveTab] = useState("chats");
@@ -176,11 +209,13 @@ export default function Chat() {
           });
           break;
 
-        case 'call_accepted':
+        case 'call_accepted': {
           setCallState(prev => ({ ...prev, status: 'connected' }));
-          const callerStream = await getMedia(callStateRef.current.callType);
-          await createOffer(data.from, data.roomId, callerStream);
+          const currentCallType = callStateRef.current.callType;
+          const callerStream = await getMedia(currentCallType);
+          await createOffer(data.from, data.roomId, callerStream, currentCallType);
           break;
+        }
 
         case 'call_rejected':
         case 'call_ended':
@@ -188,17 +223,19 @@ export default function Chat() {
           setCallState({ status: 'idle', isCaller: false, partnerName: '', callType: 'voice', roomId: '' });
           break;
 
-        case 'sdp_offer':
+        case 'sdp_offer': {
+          const currentCallType = data.callType || callStateRef.current.callType || 'voice';
           setCallState({
             status: 'connected',
             isCaller: false,
             partnerName: data.from,
-            callType: data.callType || 'voice',
+            callType: currentCallType,
             roomId: data.roomId
           });
-          const calleeStream = await getMedia(data.callType || 'voice');
-          await handleOffer(data.from, data.roomId, data.sdp, calleeStream);
+          const calleeStream = await getMedia(currentCallType);
+          await handleOffer(data.from, data.roomId, data.sdp, calleeStream, currentCallType);
           break;
+        }
 
         case 'sdp_answer':
           await handleAnswer(data.sdp);
@@ -596,6 +633,13 @@ export default function Chat() {
         onConfirm={handleLogoutConfirm}
         onCancel={() => setShowLogoutConfirm(false)}
         confirmText="Log Out"
+      />
+
+      {/* Onboarding Notification Permission Modal */}
+      <NotificationPermissionModal
+        isOpen={showNotifModal}
+        onEnable={handleEnableNotif}
+        onSkip={handleSkipNotif}
       />
     </div>
   );

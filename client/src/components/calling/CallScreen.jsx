@@ -37,14 +37,16 @@ export default function CallScreen({
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(err => console.error('Local video play error:', err));
     }
-  }, [localStream]);
+  }, [localStream, callType, isVideoMuted]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(err => console.error('Remote video play error:', err));
     }
-  }, [remoteStream]);
+  }, [remoteStream, callType]);
 
   if (status !== 'connected') return null;
 

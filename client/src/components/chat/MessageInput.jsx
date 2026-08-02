@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Picker from '@emoji-mart/react';
-import data from '@emoji-mart/data/sets/15/apple.json';
+import EmojiPicker from './EmojiPicker';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
 
 export default function MessageInput({
@@ -35,9 +34,9 @@ export default function MessageInput({
     }
   };
 
-  const handleEmojiSelect = (emoji) => {
-    if (emoji && emoji.native) {
-      setInputMessage(prev => prev + emoji.native);
+  const handleEmojiSelect = (emojiChar) => {
+    if (emojiChar) {
+      setInputMessage(prev => prev + emojiChar);
     }
     setShowEmojiPicker(false);
     if (inputRef.current) {
@@ -68,20 +67,15 @@ export default function MessageInput({
       onSubmit={handleSubmit}
       className="p-3 glass-header border-t border-white/10 flex items-center gap-2 sticky bottom-0 z-20 relative"
     >
-      {/* Emoji Mart Picker Floating Popover */}
+      {/* Native Glassmorphic Emoji Picker Floating Popover */}
       {showEmojiPicker && !disabled && (
         <div
           ref={pickerRef}
-          className="absolute bottom-16 right-0 z-50 shadow-2xl shadow-black/60 rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          className="absolute bottom-16 left-3 z-50 animate-in fade-in zoom-in-95 duration-150"
         >
-          <Picker
-            data={data}
+          <EmojiPicker
             onEmojiSelect={handleEmojiSelect}
-            theme="dark"
-            set="apple"
-            getSpritesheetURL={(set, sheetSize) => `https://unpkg.com/emoji-datasource-${set}@15.0.0/img/${set}/sheets-256/${sheetSize}.png`}
-            previewPosition="none"
-            skinTonePosition="none"
+            onClose={() => setShowEmojiPicker(false)}
           />
         </div>
       )}

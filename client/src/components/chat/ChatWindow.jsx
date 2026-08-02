@@ -21,7 +21,8 @@ export default function ChatWindow({
   onTyping,
   isConnecting = false,
   onLoadOlderHistory,
-  onStartCall
+  onStartCall,
+  callState
 }) {
   const chatContainerRef = useRef(null);
   const messageEndRef = useRef(null);
@@ -92,6 +93,7 @@ export default function ChatWindow({
         isOffTheRecord={isOffTheRecord}
         setIsOffTheRecord={setIsOffTheRecord}
         onStartCall={onStartCall}
+        callState={callState}
       />
 
       {/* Messages Canvas */}
