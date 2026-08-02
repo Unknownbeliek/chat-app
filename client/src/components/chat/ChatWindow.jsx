@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useLayoutEffect } from 'react';
 import { Loader2, Server } from 'lucide-react';
 import ChatHeader from './ChatHeader';
 import MessageBubble from './MessageBubble';
@@ -19,10 +19,13 @@ export default function ChatWindow({
   typingUsers = {},
   wpm,
   onTyping,
-  isConnecting = false
+  isConnecting = false,
+  onLoadOlderHistory
 }) {
   const chatContainerRef = useRef(null);
   const messageEndRef = useRef(null);
+  const isFetchingRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
 
   const scrollToBottom = (instant = false) => {
     if (chatContainerRef.current) {
@@ -36,14 +39,42 @@ export default function ChatWindow({
   };
 
   useEffect(() => {
+    prevScrollHeightRef.current = 0;
+    isFetchingRef.current = false;
     const timer = setTimeout(() => scrollToBottom(true), 50);
     return () => clearTimeout(timer);
   }, [selectedUser]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => scrollToBottom(false), 50);
-    return () => clearTimeout(timer);
+  // Preserve scroll position when older messages are prepended to the top
+  useLayoutEffect(() => {
+    if (prevScrollHeightRef.current > 0 && chatContainerRef.current) {
+      const newScrollHeight = chatContainerRef.current.scrollHeight;
+      const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
+      chatContainerRef.current.scrollTop = scrollDiff;
+      prevScrollHeightRef.current = 0;
+    }
+    isFetchingRef.current = false;
   }, [chatMessages]);
+
+  // Auto-scroll to bottom on new messages if not loading older history
+  useEffect(() => {
+    if (prevScrollHeightRef.current === 0) {
+      const timer = setTimeout(() => scrollToBottom(false), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [chatMessages]);
+
+  const handleScroll = (e) => {
+    const container = e.target;
+    if (container.scrollTop === 0 && !isFetchingRef.current && chatMessages.length > 0) {
+      const oldestMsg = chatMessages[0];
+      if (oldestMsg && oldestMsg.timestamp && onLoadOlderHistory) {
+        isFetchingRef.current = true;
+        prevScrollHeightRef.current = container.scrollHeight;
+        onLoadOlderHistory(oldestMsg.timestamp);
+      }
+    }
+  };
 
   const activeTypers = Object.entries(typingUsers).filter(
     ([user]) => selectedUser === "Global Chat" || user.toLowerCase() === selectedUser.toLowerCase()
@@ -64,6 +95,7 @@ export default function ChatWindow({
       {/* Messages Canvas */}
       <div
         ref={chatContainerRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto chat-scroll p-4 space-y-2 relative flex flex-col"
       >
         {/* Server Connecting Banner Overlay */}

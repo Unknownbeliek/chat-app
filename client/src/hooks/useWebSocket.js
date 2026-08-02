@@ -59,6 +59,24 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
             }
             break;
 
+          case 'older_history':
+            if (data.data) {
+              const rawPartner = data.recipient || "Global Chat";
+              setChatHistory(prev => {
+                const partnerKey = Object.keys(prev).find(
+                  k => k.toLowerCase() === rawPartner.toLowerCase()
+                ) || rawPartner;
+                const existing = prev[partnerKey] || [];
+                const existingTimestamps = new Set(existing.map(m => m.timestamp));
+                const newOlder = data.data.filter(m => !existingTimestamps.has(m.timestamp));
+                return {
+                  ...prev,
+                  [partnerKey]: [...newOlder, ...existing]
+                };
+              });
+            }
+            break;
+
           case 'global_chat':
             setChatHistory(prev => ({
               ...prev,

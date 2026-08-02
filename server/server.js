@@ -471,6 +471,54 @@ wss.on('connection', async (ws) => {
           }));
         }
       }
+
+      // 7. Cursor-Based Pagination (Infinite Scroll) Load Older History
+      else if (data.type === 'load_older_history') {
+        const { oldestTimestamp, recipient } = data;
+        if (!oldestTimestamp) return;
+
+        try {
+          const cursorDate = new Date(oldestTimestamp);
+          let query = { timestamp: { $lt: cursorDate } };
+
+          if (recipient && recipient !== 'Global Chat') {
+            query.type = 'private_chat';
+            query.$or = [
+              { username: new RegExp(`^${currentUsername}$`, 'i'), recipient: new RegExp(`^${recipient.trim()}$`, 'i') },
+              { username: new RegExp(`^${recipient.trim()}$`, 'i'), recipient: new RegExp(`^${currentUsername}$`, 'i') }
+            ];
+          } else {
+            query.type = 'global_chat';
+          }
+
+          const olderMessages = await Message.find(query)
+            .sort({ timestamp: -1 })
+            .limit(50)
+            .lean();
+
+          // Reverse so they are sent in chronological order (oldest to newest)
+          olderMessages.reverse();
+
+          const formattedHistory = olderMessages.map(msg => ({
+            type: msg.type || (recipient && recipient !== 'Global Chat' ? 'private_chat' : 'global_chat'),
+            sender: msg.username,
+            recipient: msg.recipient,
+            message: msg.message,
+            timestamp: new Date(msg.timestamp).toISOString()
+          }));
+
+          if (ws.readyState === 1) {
+            ws.send(JSON.stringify({
+              type: 'older_history',
+              recipient: recipient || 'Global Chat',
+              data: formattedHistory,
+              hasMore: olderMessages.length === 50
+            }));
+          }
+        } catch (err) {
+          console.error('Error loading older history:', err);
+        }
+      }
     } catch (err) {
       console.error('WS message error:', err);
     }

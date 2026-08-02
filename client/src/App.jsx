@@ -292,6 +292,14 @@ export default function Chat() {
     setInputMessage("");
   };
 
+  // Load Older Messages Handler (Cursor-Based Pagination)
+  const handleLoadOlderHistory = (oldestTimestamp) => {
+    sendMessage('load_older_history', {
+      oldestTimestamp,
+      recipient: selectedUser
+    });
+  };
+
   // Notification Permission Toggle
   const handleToggleNotifications = async () => {
     if (!notificationsEnabled) {
@@ -406,6 +414,7 @@ export default function Chat() {
                   wpm: currentWpm
                 });
               }}
+              onLoadOlderHistory={handleLoadOlderHistory}
             />
           )}
         </div>
