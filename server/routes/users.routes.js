@@ -1,13 +1,14 @@
 import express from 'express';
 import { User } from '../models/User.js';
 import { activeUsers } from '../services/activeUsers.service.js';
+import { broadcastUserList } from '../services/broadcast.service.js';
 
 const router = express.Router();
 
 // REST Endpoint: Get All Registered Users with Online Status
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({}, 'username bio status location avatarColor createdAt').lean();
+    const users = await User.find({}, 'username bio status location avatarColor avatarUrl createdAt').lean();
     const onlineList = Array.from(activeUsers.values()).map(u => u.originalName.toLowerCase());
 
     const result = users.map(u => ({
@@ -16,6 +17,7 @@ router.get('/users', async (req, res) => {
       status: u.status || 'Available',
       location: u.location || '',
       avatarColor: u.avatarColor || '',
+      avatarUrl: u.avatarUrl || '',
       createdAt: u.createdAt,
       isOnline: onlineList.includes(u.username.toLowerCase())
     }));
@@ -35,7 +37,7 @@ router.get('/users', async (req, res) => {
 router.get('/profile/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const user = await User.findOne({ username: new RegExp(`^${username.trim()}$`, 'i') }, 'username bio status location avatarColor createdAt').lean();
+    const user = await User.findOne({ username: new RegExp(`^${username.trim()}$`, 'i') }, 'username bio status location avatarColor avatarUrl createdAt').lean();
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -56,7 +58,7 @@ router.get('/profile/:username', async (req, res) => {
 // REST Endpoint: Update User Profile
 router.put('/profile', async (req, res) => {
   try {
-    const { username, bio, status, location, avatarColor } = req.body;
+    const { username, bio, status, location, avatarColor, avatarUrl } = req.body;
     if (!username) {
       return res.status(400).json({ error: 'Username is required.' });
     }
@@ -71,8 +73,12 @@ router.put('/profile', async (req, res) => {
     if (status !== undefined) user.status = status.trim();
     if (location !== undefined) user.location = location.trim();
     if (avatarColor !== undefined) user.avatarColor = avatarColor.trim();
+    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl.trim();
 
     await user.save();
+
+    // Broadcast updated user list to all online clients
+    broadcastUserList();
 
     res.json({
       success: true,
@@ -82,6 +88,7 @@ router.put('/profile', async (req, res) => {
         status: user.status,
         location: user.location,
         avatarColor: user.avatarColor,
+        avatarUrl: user.avatarUrl,
         createdAt: user.createdAt
       }
     });

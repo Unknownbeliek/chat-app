@@ -89,18 +89,23 @@ function renderInlineMarkdown(line) {
   });
 }
 
-export default function MessageBubble({ messageData, currentUsername }) {
+export default function MessageBubble({ messageData, currentUsername, registeredUsers = [] }) {
   const isMe = messageData.sender && messageData.sender.toLowerCase() === currentUsername.toLowerCase();
   const senderName = messageData.sender || "System";
   const isOtr = messageData.isOffTheRecord || false;
   const isBot = messageData.isBotResponse || senderName === "PingBot";
+
+  const senderUser = (registeredUsers || []).find(
+    u => u && u.username && u.username.toLowerCase() === senderName.toLowerCase()
+  );
 
   return (
     <div className={`flex items-end gap-2.5 my-2.5 msg-enter ${isMe ? "flex-row-reverse" : "flex-row"}`}>
       {/* Sender Avatar */}
       <Avatar
         name={isBot ? "PingBot" : senderName}
-        customColor={isBot ? "#8b5cf6" : undefined}
+        customColor={isBot ? "#8b5cf6" : senderUser?.avatarColor}
+        avatarUrl={isBot ? undefined : senderUser?.avatarUrl}
         size="sm"
       />
 

@@ -22,7 +22,8 @@ export default function ChatWindow({
   isConnecting = false,
   onLoadOlderHistory,
   onStartCall,
-  callState
+  callState,
+  registeredUsers = []
 }) {
   const chatContainerRef = useRef(null);
   const messageEndRef = useRef(null);
@@ -146,6 +147,7 @@ export default function ChatWindow({
               key={msg._id || idx}
               messageData={msg}
               currentUsername={currentUsername}
+              registeredUsers={registeredUsers}
             />
           ))
         )}

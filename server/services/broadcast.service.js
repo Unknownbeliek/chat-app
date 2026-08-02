@@ -21,7 +21,7 @@ export function broadcast(data) {
 export async function broadcastUserList() {
   if (!activeUsersRef) return;
   try {
-    const allDbUsers = await User.find({}, 'username bio status avatarColor').lean();
+    const allDbUsers = await User.find({}, 'username bio status avatarColor avatarUrl').lean();
     const onlineKeys = Array.from(activeUsersRef.keys());
 
     const usersData = allDbUsers.map(u => ({
@@ -29,6 +29,7 @@ export async function broadcastUserList() {
       bio: u.bio || '',
       status: u.status || '',
       avatarColor: u.avatarColor || '',
+      avatarUrl: u.avatarUrl || '',
       isOnline: onlineKeys.includes(u.username.toLowerCase())
     }));
 

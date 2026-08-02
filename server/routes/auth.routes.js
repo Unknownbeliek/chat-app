@@ -52,7 +52,8 @@ router.post('/login', async (req, res) => {
       bio: user.bio || '',
       status: user.status || '',
       location: user.location || '',
-      avatarColor: user.avatarColor || ''
+      avatarColor: user.avatarColor || '',
+      avatarUrl: user.avatarUrl || ''
     });
   } catch (err) {
     console.error('Login error:', err);

@@ -9,7 +9,8 @@ export default function ContactItem({
   onClick,
   lastMessage,
   bio,
-  avatarColor
+  avatarColor,
+  avatarUrl
 }) {
   return (
     <button
@@ -23,6 +24,7 @@ export default function ContactItem({
       <Avatar
         name={name}
         customColor={avatarColor}
+        avatarUrl={avatarUrl}
         size="md"
         isOnline={isOnline}
         showBadge={true}

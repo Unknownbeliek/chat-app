@@ -33,6 +33,7 @@ export default function ChatHeader({
         <Avatar
           name={selectedUser}
           customColor={targetUserInfo?.avatarColor}
+          avatarUrl={targetUserInfo?.avatarUrl}
           size="md"
           isOnline={isGlobal || targetUserInfo?.isOnline}
           showBadge={!isGlobal}

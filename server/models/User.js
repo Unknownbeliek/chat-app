@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   status: { type: String, default: "Available" },
   location: { type: String, default: "" },
   avatarColor: { type: String, default: "" },
+  avatarUrl: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now }
 });
 

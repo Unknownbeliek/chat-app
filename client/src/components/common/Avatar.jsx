@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getUsernameColor, getInitials } from '../../utils/avatarUtils';
 
-export default function Avatar({ name, customColor, size = "md", isOnline = false, showBadge = false }) {
+export default function Avatar({ name, customColor, avatarUrl, size = "md", isOnline = false, showBadge = false }) {
+  const [imgError, setImgError] = useState(false);
+
   const sizeClasses = {
     sm: "w-8 h-8 text-xs",
     md: "w-10 h-10 text-sm",
@@ -12,17 +14,28 @@ export default function Avatar({ name, customColor, size = "md", isOnline = fals
   const color = getUsernameColor(name, customColor);
   const initials = getInitials(name);
 
+  const hasImage = avatarUrl && !imgError;
+
   return (
     <div className="relative inline-block flex-shrink-0">
       <div
-        className={`${sizeClasses} rounded-full flex items-center justify-center font-bold text-white shadow-md transition-transform duration-200 hover:scale-105`}
-        style={{ backgroundColor: color }}
+        className={`${sizeClasses} rounded-full flex items-center justify-center font-bold text-white shadow-md overflow-hidden transition-transform duration-200 hover:scale-105`}
+        style={{ backgroundColor: hasImage ? 'transparent' : color }}
       >
-        {initials}
+        {hasImage ? (
+          <img
+            src={avatarUrl}
+            alt={name || "Avatar"}
+            className="w-full h-full object-cover rounded-full"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          initials
+        )}
       </div>
       {showBadge && (
         <span
-          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#121020] ${
+          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#121020] z-10 ${
             isOnline ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-zinc-500"
           }`}
         />

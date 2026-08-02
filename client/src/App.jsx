@@ -49,6 +49,7 @@ export default function Chat() {
     status: "Available",
     location: "",
     avatarColor: "#6366f1",
+    avatarUrl: "",
     createdAt: null
   });
   const [profileSaveStatus, setProfileSaveStatus] = useState("");
@@ -338,6 +339,7 @@ export default function Chat() {
           status: data.user.status || "Available",
           location: data.user.location || "",
           avatarColor: data.user.avatarColor || "#6366f1",
+          avatarUrl: data.user.avatarUrl || "",
           createdAt: data.user.createdAt
         });
       }
@@ -439,7 +441,8 @@ export default function Chat() {
           bio: profile.bio,
           status: profile.status,
           location: profile.location,
-          avatarColor: profile.avatarColor
+          avatarColor: profile.avatarColor,
+          avatarUrl: profile.avatarUrl
         })
       });
       const data = await res.json();
@@ -601,6 +604,7 @@ export default function Chat() {
               }}
               onLoadOlderHistory={handleLoadOlderHistory}
               onStartCall={handleStartCall}
+              registeredUsers={registeredUsers}
             />
           )}
         </div>

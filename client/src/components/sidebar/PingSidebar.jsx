@@ -96,6 +96,7 @@ export default function PingSidebar({
               lastMessage={getLastMsg(u.username)}
               bio={u.bio}
               avatarColor={u.avatarColor}
+              avatarUrl={u.avatarUrl}
             />
           ))}
 

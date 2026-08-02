@@ -22,3 +22,20 @@ export const getInitials = (name) => {
   }
   return name.toUpperCase();
 };
+
+export const PRESET_AVATARS = [
+  "/avatars/avatar01.jpg",
+  "/avatars/avatar02.jpg",
+  "/avatars/avatar03.jpg",
+  "/avatars/avatar04.jpg",
+  "/avatars/avatar05.jpg",
+  "/avatars/avatar06.jpg",
+  "/avatars/avatar07.jpg",
+  "/avatars/avatar08.jpg",
+  "/avatars/avatar09.jpg",
+  "/avatars/avatar10.jpg",
+  "/avatars/avatar11.jpg",
+  "/avatars/avatar12.jpg",
+  "/avatars/avatar13.avf",
+  "/avatars/avatar14.jpg"
+];
