@@ -1,10 +1,19 @@
-import React from 'react';
-import { Phone, PhoneOff, Video } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Phone, PhoneOff, Video, AlertCircle } from 'lucide-react';
 
-export default function CallModal({ callState, onAccept, onReject }) {
+export default function CallModal({ callState, onAccept, onReject, mediaError }) {
   if (!callState || callState.status === 'idle') return null;
 
   const { isCaller, partnerName, callType, status } = callState;
+
+  // Auto-decline/cancel call if unanswered for 30 seconds
+  useEffect(() => {
+    if (status !== 'ringing') return;
+    const timeout = setTimeout(() => {
+      onReject();
+    }, 30000);
+    return () => clearTimeout(timeout);
+  }, [status, onReject]);
 
   if (status !== 'ringing') return null;
 
@@ -14,6 +23,21 @@ export default function CallModal({ callState, onAccept, onReject }) {
         {/* Glow effect */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl" />
+
+        {/* Media Access Permission Error Alert */}
+        {mediaError && (
+          <div className="mb-4 w-full bg-rose-500/20 border border-rose-500/40 p-3 rounded-2xl flex items-center gap-2.5 text-left text-xs text-rose-200">
+            <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+            <div>
+              <p className="font-bold">Media Access Required</p>
+              <p className="text-[11px] text-rose-300">
+                {mediaError === 'permission_denied'
+                  ? 'Camera/microphone access was denied in browser settings.'
+                  : 'No camera or microphone device found on system.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Pulsing Avatar Container */}
         <div className="relative mb-6">
@@ -26,7 +50,7 @@ export default function CallModal({ callState, onAccept, onReject }) {
         <h3 className="text-xl font-bold text-white mb-1">{partnerName}</h3>
         <p className="text-sm text-indigo-300 mb-6 flex items-center gap-1.5 justify-center font-medium">
           {callType === 'video' ? <Video className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-          {isCaller ? 'Calling...' : `Incoming ${callType} call`}
+          {isCaller ? 'Calling... (Auto-cancels in 30s)' : `Incoming ${callType} call`}
         </p>
 
         {/* Control Buttons */}

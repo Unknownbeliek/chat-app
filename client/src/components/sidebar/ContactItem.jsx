@@ -15,10 +15,10 @@ export default function ContactItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center gap-3 transition-all duration-200 ${
+      className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center gap-3 transition-all duration-200 border-l-2 ${
         isSelected
-          ? "bg-indigo-600/30 border border-indigo-500/40 shadow-lg shadow-indigo-500/10 backdrop-blur-md"
-          : "hover:bg-white/5 border border-transparent"
+          ? "border-indigo-500 bg-indigo-600/30 text-white shadow-lg shadow-indigo-500/10 backdrop-blur-md border-t border-r border-b border-t-white/10 border-r-white/10 border-b-white/10"
+          : "border-transparent hover:bg-white/5 border-t border-r border-b border-transparent"
       }`}
     >
       <Avatar
@@ -39,7 +39,7 @@ export default function ContactItem({
             </span>
           )}
         </div>
-        <p className="text-xs text-zinc-400 truncate">
+        <p className="text-xs text-zinc-400 truncate max-w-[180px]">
           {lastMessage ? lastMessage.message : (bio || "Available")}
         </p>
       </div>

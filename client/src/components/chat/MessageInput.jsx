@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Paperclip } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
 
@@ -82,16 +83,28 @@ export default function MessageInput({
 
       {/* Input Field Wrapper */}
       <div className="flex-1 relative flex items-center">
-        {/* Emoji Trigger Button */}
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="absolute left-3 text-lg text-zinc-400 hover:text-amber-400 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all z-10"
-          title="Choose Emoji"
-        >
-          😀
-        </button>
+        {/* Attachment & Emoji Trigger Buttons */}
+        <div className="absolute left-3 flex items-center gap-1.5 z-10">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => alert("Attachment upload coming soon!")}
+            className="p-1 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-white/10 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all"
+            title="Attach Files / Media"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="text-base text-zinc-400 hover:text-amber-400 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all leading-none"
+            title="Choose Emoji"
+          >
+            😀
+          </button>
+        </div>
 
         <input
           ref={inputRef}
@@ -101,7 +114,7 @@ export default function MessageInput({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "Waking up server... Please wait." : "Type a message or @PingBot..."}
-          className="w-full glass-input pl-10 pr-16 py-3 rounded-2xl text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner"
+          className="w-full bg-white/5 border border-white/10 pl-16 pr-16 py-3 rounded-2xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner backdrop-blur-md"
         />
 
         {wpm > 0 && !disabled && (

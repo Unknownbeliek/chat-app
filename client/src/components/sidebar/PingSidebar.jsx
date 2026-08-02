@@ -47,7 +47,7 @@ export default function PingSidebar({
             placeholder="Search contacts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full glass-input px-3.5 py-2 pl-9 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 transition-all"
+            className="w-full bg-white/5 border border-white/10 backdrop-blur-md px-3.5 py-2 pl-9 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
           />
           <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-500" />
         </div>

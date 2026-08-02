@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Minimize2, Maximize2, RefreshCw, AlertTriangle } from 'lucide-react';
 
 export default function CallScreen({
   callState,
@@ -7,6 +7,7 @@ export default function CallScreen({
   remoteStream,
   isAudioMuted,
   isVideoMuted,
+  iceState,
   onToggleAudio,
   onToggleVideo,
   onEndCall
@@ -14,6 +15,8 @@ export default function CallScreen({
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [seconds, setSeconds] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isSwapped, setIsSwapped] = useState(false);
 
   const { partnerName, callType, status } = callState;
 
@@ -33,79 +36,206 @@ export default function CallScreen({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Attach streams to video elements
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.play().catch(err => console.error('Local video play error:', err));
-    }
-  }, [localStream, callType, isVideoMuted]);
+  // Attach streams to video elements dynamically based on swapped state
+  const mainStream = isSwapped ? localStream : remoteStream;
+  const miniStream = isSwapped ? remoteStream : localStream;
+  const isMainMuted = isSwapped ? isVideoMuted : false;
+  const isMiniMuted = isSwapped ? false : isVideoMuted;
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(err => console.error('Remote video play error:', err));
+    if (remoteVideoRef.current && mainStream) {
+      remoteVideoRef.current.srcObject = mainStream;
+      remoteVideoRef.current.play().catch(err => console.error('Main video play error:', err));
     }
-  }, [remoteStream, callType]);
+  }, [mainStream, callType, isSwapped]);
+
+  useEffect(() => {
+    if (localVideoRef.current && miniStream) {
+      localVideoRef.current.srcObject = miniStream;
+      localVideoRef.current.play().catch(err => console.error('Mini video play error:', err));
+    }
+  }, [miniStream, callType, isSwapped, isVideoMuted]);
 
   if (status !== 'connected') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-      {/* Top Header Pill with Timer */}
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 glass-card px-5 py-2 rounded-full flex items-center gap-3 border border-white/10 shadow-xl z-20 backdrop-blur-xl">
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span className="text-xs font-semibold text-white">{partnerName}</span>
-        <span className="text-xs text-zinc-400 font-mono">| {formatTime(seconds)}</span>
-      </div>
-      {/* Background Remote Video or Audio Avatar */}
-      <div className="relative w-full h-full flex items-center justify-center bg-zinc-900">
-        {remoteStream && callType === 'video' ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-4">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-5xl font-bold text-white shadow-2xl animate-pulse">
-              {partnerName ? partnerName.charAt(0).toUpperCase() : '?'}
-            </div>
-            <h2 className="text-2xl font-bold text-white">{partnerName}</h2>
-            <p className="text-sm text-indigo-400 font-medium">
-              {callType === 'video' ? 'Video Stream Connecting...' : 'Voice Call Connected'}
-            </p>
-          </div>
-        )}
+  const isReconnecting = iceState === 'disconnected' || iceState === 'reconnecting';
 
-        {/* Local Stream Picture-in-Picture Thumbnail */}
-        {localStream && callType === 'video' && (
-          <div className="absolute bottom-24 right-6 w-40 h-56 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-zinc-900 z-10">
-            {!isVideoMuted ? (
+  // ---------------------------------------------------------------------------
+  // MINIMIZED FLOATING CARD UI
+  // ---------------------------------------------------------------------------
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-5 right-5 z-50 w-72 sm:w-80 bg-slate-900/90 backdrop-blur-2xl rounded-2xl p-3.5 shadow-2xl border border-slate-700/60 flex flex-col gap-3 animate-in slide-in-from-bottom-5 duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div>
+              <h4 className="font-bold text-xs text-slate-200 truncate max-w-[120px]">{partnerName}</h4>
+              <span className="text-[10px] text-slate-400 font-mono font-semibold">{formatTime(seconds)}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsMinimized(false)}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-700/50"
+              title="Expand Call"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onEndCall}
+              className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30"
+              title="End Call"
+            >
+              <PhoneOff className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Small Video Preview */}
+        {callType === 'video' && (
+          <div className="relative w-full h-32 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+            {remoteStream ? (
               <video
-                ref={localVideoRef}
+                ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                muted
-                className="w-full h-full object-cover transform -scale-x-100"
+                className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-400 text-xs font-semibold">
-                Camera Off
+              <div className="text-center text-xs text-slate-400 font-medium">
+                Audio Call Connected
+              </div>
+            )}
+
+            {isReconnecting && (
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center text-[11px] text-amber-300 font-semibold gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 animate-bounce" />
+                <span>Reconnecting...</span>
               </div>
             )}
           </div>
         )}
+
+        {/* Mini Quick Controls */}
+        <div className="flex items-center justify-around pt-1 border-t border-slate-800">
+          <button
+            onClick={onToggleAudio}
+            className={`p-2 rounded-xl transition-all border ${
+              isAudioMuted ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700/50 hover:bg-slate-700/80'
+            }`}
+          >
+            {isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+          {callType === 'video' && (
+            <button
+              onClick={onToggleVideo}
+              className={`p-2 rounded-xl transition-all border ${
+                isVideoMuted ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700/50 hover:bg-slate-700/80'
+              }`}
+            >
+              {isVideoMuted ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // FULLSCREEN CALL SCREEN UI
+  // ---------------------------------------------------------------------------
+  return (
+    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* 2. Sleek Call Info Pill Header */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-slate-900/80 backdrop-blur-sm border border-slate-800 rounded-full px-4 py-1.5 flex items-center gap-3 shadow-lg z-20">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="text-xs font-medium text-slate-200">{partnerName}</span>
+        <span className="text-xs text-slate-400 font-mono font-semibold">| {formatTime(seconds)}</span>
+        <button
+          onClick={() => setIsMinimized(true)}
+          className="ml-1 p-1 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          title="Minimize Call"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Floating Control Bar */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 glass-card px-6 py-3 rounded-full flex items-center gap-6 shadow-2xl border border-white/10 z-20 backdrop-blur-xl">
+      {/* Connection State Reconnecting Overlay Toast */}
+      {isReconnecting && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/20 border border-amber-500/40 text-amber-300 px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg backdrop-blur-md z-30 animate-pulse">
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <span>Reconnecting Video Stream...</span>
+        </div>
+      )}
+
+      {/* 3. Main Canvas: Atmospheric Radial Gradient & Glowing Audio Visualizer */}
+      <div className="relative w-full h-full flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black">
+        {mainStream && callType === 'video' && !isMainMuted ? (
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className={`w-full h-full object-cover ${isSwapped ? 'transform -scale-x-100' : ''}`}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-5 z-10">
+            {/* Glowing Ripples Audio Visualizer */}
+            <div className="relative flex items-center justify-center">
+              <div className="absolute w-44 h-44 rounded-full bg-indigo-500/15 animate-ping duration-1000" />
+              <div className="absolute w-36 h-36 rounded-full bg-purple-500/20 animate-pulse duration-700" />
+              <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-5xl font-bold text-white shadow-[0_0_50px_rgba(99,102,241,0.4)] z-10">
+                {partnerName ? partnerName.charAt(0).toUpperCase() : '?'}
+              </div>
+            </div>
+            
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-slate-100 tracking-wide">{partnerName}</h2>
+              <p className="text-sm text-slate-400 font-medium">
+                {callType === 'video' ? 'Camera Paused' : 'Voice Call Connected'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 4. Self-View Picture-in-Picture (PiP) Thumbnail */}
+        {miniStream && callType === 'video' && (
+          <div
+            onClick={() => setIsSwapped(!isSwapped)}
+            className="absolute bottom-24 right-6 w-36 h-52 sm:w-44 sm:h-60 rounded-xl overflow-hidden border border-slate-600/80 shadow-2xl transition-all duration-300 opacity-90 hover:opacity-100 hover:scale-105 hover:border-indigo-400 bg-slate-950 z-10 cursor-pointer group"
+            title="Click to swap video streams"
+          >
+            {!isMiniMuted ? (
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted={!isSwapped}
+                className={`w-full h-full object-cover ${!isSwapped ? 'transform -scale-x-100' : ''}`}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-400 text-xs font-semibold">
+                Camera Off
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5 backdrop-blur-xs">
+              <RefreshCw className="w-4 h-4" />
+              <span>Swap</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 1. Floating Glass Control Dock */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-full px-6 py-3 shadow-2xl flex items-center gap-6 z-20">
         {/* Toggle Mic */}
         <button
           onClick={onToggleAudio}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-            isAudioMuted ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/10 text-white hover:bg-white/20'
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+            isAudioMuted
+              ? 'bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20'
+              : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50'
           }`}
           title={isAudioMuted ? 'Unmute Mic' : 'Mute Mic'}
         >
@@ -116,8 +246,10 @@ export default function CallScreen({
         {callType === 'video' && (
           <button
             onClick={onToggleVideo}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-              isVideoMuted ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/10 text-white hover:bg-white/20'
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+              isVideoMuted
+                ? 'bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20'
+                : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50'
             }`}
             title={isVideoMuted ? 'Turn Camera On' : 'Turn Camera Off'}
           >
@@ -125,10 +257,21 @@ export default function CallScreen({
           </button>
         )}
 
+        {/* Swap Streams Button */}
+        {callType === 'video' && (
+          <button
+            onClick={() => setIsSwapped(!isSwapped)}
+            className="w-11 h-11 rounded-full bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50 flex items-center justify-center transition-all"
+            title="Swap Video Streams"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        )}
+
         {/* End Call Button */}
         <button
           onClick={onEndCall}
-          className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-all hover:scale-105 active:scale-95"
+          className="w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-all hover:scale-105 active:scale-95"
           title="End Call"
         >
           <PhoneOff className="w-6 h-6 transform rotate-[135deg]" />

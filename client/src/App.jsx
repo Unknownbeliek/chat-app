@@ -179,6 +179,8 @@ export default function Chat() {
     remoteStream,
     isAudioMuted,
     isVideoMuted,
+    iceState,
+    mediaError,
     getMedia,
     createOffer,
     handleOffer,
@@ -615,6 +617,7 @@ export default function Chat() {
         callState={callState}
         onAccept={handleAcceptCall}
         onReject={handleRejectCall}
+        mediaError={mediaError}
       />
 
       {/* Active Call Interface */}
@@ -624,6 +627,7 @@ export default function Chat() {
         remoteStream={remoteStream}
         isAudioMuted={isAudioMuted}
         isVideoMuted={isVideoMuted}
+        iceState={iceState}
         onToggleAudio={toggleAudio}
         onToggleVideo={toggleVideo}
         onEndCall={handleEndCall}

@@ -89,7 +89,7 @@ function renderInlineMarkdown(line) {
   });
 }
 
-export default function MessageBubble({ messageData, currentUsername, registeredUsers = [] }) {
+export default function MessageBubble({ messageData, currentUsername, registeredUsers = [], isGrouped = false }) {
   const isMe = messageData.sender && messageData.sender.toLowerCase() === currentUsername.toLowerCase();
   const senderName = messageData.sender || "System";
   const isOtr = messageData.isOffTheRecord || false;
@@ -100,46 +100,54 @@ export default function MessageBubble({ messageData, currentUsername, registered
   );
 
   return (
-    <div className={`flex items-end gap-2.5 my-2.5 msg-enter ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-      {/* Sender Avatar */}
-      <Avatar
-        name={isBot ? "PingBot" : senderName}
-        customColor={isBot ? "#8b5cf6" : senderUser?.avatarColor}
-        avatarUrl={isBot ? undefined : senderUser?.avatarUrl}
-        size="sm"
-      />
+    <div className={`flex items-end gap-2 text-left msg-enter ${isGrouped ? "mt-1 mb-0.5" : "mt-3 mb-1"} ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+      {/* Sender Avatar - shown only for initial message in group */}
+      {!isGrouped ? (
+        <Avatar
+          name={isBot ? "PingBot" : senderName}
+          customColor={isBot ? "#8b5cf6" : senderUser?.avatarColor}
+          avatarUrl={isBot ? undefined : senderUser?.avatarUrl}
+          size="sm"
+        />
+      ) : (
+        <div className="w-8 flex-shrink-0" />
+      )}
 
       {/* Message Bubble Container */}
       <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-        {/* Sender Name Label */}
-        <div className="flex items-center gap-1.5 mb-1 px-1">
-          <span className="text-[11px] font-semibold text-zinc-300">
-            {isMe ? "You" : (isBot ? "🤖 PingBot" : senderName)}
-          </span>
-          {isOtr && (
-            <span className="text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md font-mono">
-              🕵️ OTR
+        {/* Sender Name Label - shown only for non-grouped messages */}
+        {!isGrouped && (
+          <div className="flex items-center gap-1.5 mb-1 px-1">
+            <span className="text-[11px] font-semibold text-zinc-300">
+              {isMe ? "You" : (isBot ? "🤖 PingBot" : senderName)}
             </span>
-          )}
-        </div>
+            {isOtr && (
+              <span className="text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md font-mono">
+                🕵️ OTR
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Message Content Bubble */}
         <div
-          className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words shadow-md transition-all ${
+          className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words shadow-md transition-all relative overflow-hidden ${
             isMe
-              ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-br-none shadow-indigo-500/20"
+              ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-tr-xs shadow-indigo-500/20"
               : isBot
-              ? "bg-purple-950/70 border border-purple-500/40 text-purple-100 rounded-bl-none shadow-purple-900/40"
-              : "bg-white/10 text-zinc-100 border border-white/10 rounded-bl-none backdrop-blur-md"
-          } ${isOtr ? "border-dashed border-amber-400/50 bg-amber-950/20" : ""}`}
+              ? "bg-purple-950/80 border border-purple-500/40 text-purple-100 rounded-tl-xs shadow-purple-900/40"
+              : "bg-slate-800/80 border border-slate-700/50 text-slate-100 rounded-tl-xs shadow-md backdrop-blur-md"
+          } ${isOtr ? "border-dashed border-amber-400/50 bg-amber-950/30" : ""}`}
         >
-          {renderFormattedMessage(messageData.message)}
-        </div>
+          <div className="inline">
+            {renderFormattedMessage(messageData.message)}
+          </div>
 
-        {/* Localized Timestamp */}
-        <span className="text-[10px] text-zinc-400 mt-1 px-1 font-mono">
-          {formatTimestamp(messageData.timestamp)}
-        </span>
+          {/* Inline Bottom-Right Timestamp */}
+          <span className={`float-right inline-block text-[10px] opacity-60 font-mono select-none ml-3 mt-1.5 ${isMe ? "text-indigo-100" : "text-slate-400"}`}>
+            {formatTimestamp(messageData.timestamp)}
+          </span>
+        </div>
       </div>
     </div>
   );

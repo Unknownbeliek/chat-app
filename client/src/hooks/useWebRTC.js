@@ -13,6 +13,8 @@ export function useWebRTC({ sendSignal }) {
   const [remoteStream, setRemoteStream] = useState(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [iceState, setIceState] = useState('new');
+  const [mediaError, setMediaError] = useState(null);
 
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -27,6 +29,7 @@ export function useWebRTC({ sendSignal }) {
       }
     }
 
+    setMediaError(null);
     try {
       const constraints = {
         audio: true,
@@ -38,12 +41,21 @@ export function useWebRTC({ sendSignal }) {
       return stream;
     } catch (err) {
       console.error('Error accessing media devices:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setMediaError('permission_denied');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setMediaError('device_not_found');
+      } else {
+        setMediaError('generic_error');
+      }
+
       // Fallback to audio-only if video fails
       if (callType === 'video') {
         try {
           const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           localStreamRef.current = audioStream;
           setLocalStream(audioStream);
+          setMediaError(null);
           return audioStream;
         } catch (audioErr) {
           console.error('Error accessing audio device:', audioErr);
@@ -90,6 +102,7 @@ export function useWebRTC({ sendSignal }) {
 
     pc.oniceconnectionstatechange = () => {
       console.log('ICE connection state:', pc.iceConnectionState);
+      setIceState(pc.iceConnectionState);
     };
 
     return pc;
@@ -190,6 +203,8 @@ export function useWebRTC({ sendSignal }) {
     setRemoteStream(null);
     setIsAudioMuted(false);
     setIsVideoMuted(false);
+    setIceState('new');
+    setMediaError(null);
   }, []);
 
   return {
@@ -197,6 +212,8 @@ export function useWebRTC({ sendSignal }) {
     remoteStream,
     isAudioMuted,
     isVideoMuted,
+    iceState,
+    mediaError,
     getMedia,
     createOffer,
     handleOffer,

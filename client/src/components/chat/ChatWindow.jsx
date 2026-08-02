@@ -142,14 +142,22 @@ export default function ChatWindow({
             </p>
           </div>
         ) : (
-          !isConnecting && chatMessages.map((msg, idx) => (
-            <MessageBubble
-              key={msg._id || idx}
-              messageData={msg}
-              currentUsername={currentUsername}
-              registeredUsers={registeredUsers}
-            />
-          ))
+          !isConnecting && chatMessages.map((msg, idx) => {
+            const prevMsg = chatMessages[idx - 1];
+            const isSameSender = prevMsg && prevMsg.sender && msg.sender && prevMsg.sender.toLowerCase() === msg.sender.toLowerCase();
+            const timeDiff = prevMsg && msg.timestamp && prevMsg.timestamp ? Math.abs(new Date(msg.timestamp) - new Date(prevMsg.timestamp)) : Infinity;
+            const isGrouped = isSameSender && timeDiff < 180000; // within 3 minutes
+
+            return (
+              <MessageBubble
+                key={msg._id || idx}
+                messageData={msg}
+                currentUsername={currentUsername}
+                registeredUsers={registeredUsers}
+                isGrouped={isGrouped}
+              />
+            );
+          })
         )}
         <div ref={messageEndRef} />
       </div>
