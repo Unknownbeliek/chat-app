@@ -1,20 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data/sets/15/apple.json';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
-
-const EMOJI_CATEGORIES = [
-  {
-    name: "Smilies",
-    emojis: ["😊", "😂", "🤣", "😍", "🥰", "😎", "🥳", "😜", "🧐", "😅", "😇", "🤩", "😭", "🤯", "😴"]
-  },
-  {
-    name: "Reactions",
-    emojis: ["👍", "🙌", "👏", "🔥", "💯", "✨", "❤️", "💜", "💙", "🙏", "💪", "🤝", "✌️", "🎉", "👀"]
-  },
-  {
-    name: "Tech & Work",
-    emojis: ["💻", "⚡", "🤖", "🚀", "💬", "🛠️", "🎯", "🧠", "🔐", "🔮", "💡", "📌", "💎", "🌐", "⚡"]
-  }
-];
 
 export default function MessageInput({
   inputMessage,
@@ -25,11 +12,10 @@ export default function MessageInput({
 }) {
   const { wpm, registerKeystroke } = useWpmCalculator();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(0);
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
 
-  // Close picker when clicking outside
+  // Close emoji picker popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target)) {
@@ -49,8 +35,10 @@ export default function MessageInput({
     }
   };
 
-  const handleInsertEmoji = (emoji) => {
-    setInputMessage(prev => prev + emoji);
+  const handleEmojiSelect = (emoji) => {
+    if (emoji && emoji.native) {
+      setInputMessage(prev => prev + emoji.native);
+    }
     setShowEmojiPicker(false);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -80,49 +68,27 @@ export default function MessageInput({
       onSubmit={handleSubmit}
       className="p-3 glass-header border-t border-white/10 flex items-center gap-2 sticky bottom-0 z-20 relative"
     >
-      {/* Emoji Picker Popover */}
+      {/* Emoji Mart Picker Floating Popover */}
       {showEmojiPicker && !disabled && (
         <div
           ref={pickerRef}
-          className="absolute bottom-16 left-3 w-72 glass-panel p-3 rounded-2xl border border-white/15 shadow-2xl shadow-black/60 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150"
+          className="absolute bottom-16 right-0 z-50 shadow-2xl shadow-black/60 rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
-          {/* Category Tabs */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 text-xs">
-            {EMOJI_CATEGORIES.map((cat, idx) => (
-              <button
-                key={cat.name}
-                type="button"
-                onClick={() => setActiveCategory(idx)}
-                className={`px-2 py-1 rounded-lg font-medium transition-all ${
-                  activeCategory === idx
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Emoji Grid */}
-          <div className="grid grid-cols-5 gap-1.5 max-h-40 overflow-y-auto chat-scroll p-1">
-            {EMOJI_CATEGORIES[activeCategory].emojis.map((emoji, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => handleInsertEmoji(emoji)}
-                className="w-10 h-10 flex items-center justify-center text-xl hover:bg-white/10 rounded-xl hover:scale-125 active:scale-95 transition-all"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
+          <Picker
+            data={data}
+            onEmojiSelect={handleEmojiSelect}
+            theme="dark"
+            set="apple"
+            getSpritesheetURL={(set, sheetSize) => `https://unpkg.com/emoji-datasource-${set}@15.0.0/img/${set}/sheets-256/${sheetSize}.png`}
+            previewPosition="none"
+            skinTonePosition="none"
+          />
         </div>
       )}
 
       {/* Input Field Wrapper */}
       <div className="flex-1 relative flex items-center">
-        {/* Emoji Button inside Input */}
+        {/* Emoji Trigger Button */}
         <button
           type="button"
           disabled={disabled}
@@ -130,7 +96,7 @@ export default function MessageInput({
           className="absolute left-3 text-lg text-zinc-400 hover:text-amber-400 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all z-10"
           title="Choose Emoji"
         >
-          😊
+          😀
         </button>
 
         <input

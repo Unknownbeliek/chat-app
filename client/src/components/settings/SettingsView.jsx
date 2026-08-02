@@ -102,7 +102,7 @@ export default function SettingsView({
               <p className="text-xs text-zinc-400">Current build version</p>
             </div>
             <span className="text-xs font-mono bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full border border-indigo-500/30">
-              v2.0.1
+              v2.0.2
             </span>
           </div>
 
