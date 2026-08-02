@@ -1,5 +1,5 @@
 import React from 'react';
-import { EyeOff, ChevronLeft } from 'lucide-react';
+import { EyeOff, ChevronLeft, Phone, Video } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import StatusBadge from '../common/StatusBadge';
 
@@ -9,7 +9,8 @@ export default function ChatHeader({
   onBackToSidebar,
   targetUserInfo,
   isOffTheRecord,
-  setIsOffTheRecord
+  setIsOffTheRecord,
+  onStartCall
 }) {
   const isGlobal = selectedUser === "Global Chat";
 

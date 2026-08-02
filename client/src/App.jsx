@@ -105,6 +105,11 @@ export default function Chat() {
     roomId: ''
   });
 
+  const callStateRef = useRef(callState);
+  useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+
   const handleCallSignalRef = useRef(null);
 
   const handleCallSignal = useCallback(async (data) => {
@@ -150,6 +155,13 @@ export default function Chat() {
     cleanupCall
   } = useWebRTC({ sendSignal });
 
+  // Cleanup WebRTC call on component unmount
+  useEffect(() => {
+    return () => {
+      cleanupCall();
+    };
+  }, [cleanupCall]);
+
   // Handle incoming WebSocket WebRTC signals
   useEffect(() => {
     handleCallSignalRef.current = async (data) => {
@@ -166,7 +178,7 @@ export default function Chat() {
 
         case 'call_accepted':
           setCallState(prev => ({ ...prev, status: 'connected' }));
-          const callerStream = await getMedia(callState.callType);
+          const callerStream = await getMedia(callStateRef.current.callType);
           await createOffer(data.from, data.roomId, callerStream);
           break;
 
@@ -200,7 +212,7 @@ export default function Chat() {
           break;
       }
     };
-  }, [getMedia, createOffer, handleOffer, handleAnswer, handleCandidate, cleanupCall, callState.callType]);
+  }, [getMedia, createOffer, handleOffer, handleAnswer, handleCandidate, cleanupCall]);
 
   const handleStartCall = async (type) => {
     if (!selectedUser || selectedUser === "Global Chat") return;
@@ -220,6 +232,7 @@ export default function Chat() {
   };
 
   const handleAcceptCall = async () => {
+    await getMedia(callState.callType);
     sendMessage('call_accepted', {
       to: callState.partnerName,
       roomId: callState.roomId

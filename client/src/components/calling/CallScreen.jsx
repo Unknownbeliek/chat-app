@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
 
 export default function CallScreen({
@@ -13,8 +13,25 @@ export default function CallScreen({
 }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const [seconds, setSeconds] = useState(0);
 
   const { partnerName, callType, status } = callState;
+
+  // Track call duration timer
+  useEffect(() => {
+    if (status !== 'connected') return;
+    setSeconds(0);
+    const interval = setInterval(() => {
+      setSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [status]);
+
+  const formatTime = (totalSec) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Attach streams to video elements
   useEffect(() => {
@@ -33,6 +50,12 @@ export default function CallScreen({
 
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* Top Header Pill with Timer */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 glass-card px-5 py-2 rounded-full flex items-center gap-3 border border-white/10 shadow-xl z-20 backdrop-blur-xl">
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="text-xs font-semibold text-white">{partnerName}</span>
+        <span className="text-xs text-zinc-400 font-mono">| {formatTime(seconds)}</span>
+      </div>
       {/* Background Remote Video or Audio Avatar */}
       <div className="relative w-full h-full flex items-center justify-center bg-zinc-900">
         {remoteStream && callType === 'video' ? (
