@@ -207,7 +207,7 @@ app.get('/api/messages/private', async (req, res) => {
       ]
     })
       .sort({ timestamp: 1 })
-      .limit(100)
+      .limit(200)
       .lean();
 
     const formattedHistory = history.map(msg => ({
@@ -275,7 +275,7 @@ wss.on('connection', async (ws) => {
   try {
     const globalHistory = await Message.find({ type: 'global_chat' })
       .sort({ timestamp: 1 })
-      .limit(50)
+      .limit(150)
       .lean();
 
     const formattedHistory = globalHistory.map(msg => ({
@@ -323,7 +323,7 @@ wss.on('connection', async (ws) => {
           ]
         })
           .sort({ timestamp: 1 })
-          .limit(100)
+          .limit(300)
           .lean();
 
         const formattedHistory = history.map(msg => ({
