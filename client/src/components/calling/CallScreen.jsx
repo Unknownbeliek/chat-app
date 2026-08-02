@@ -14,6 +14,7 @@ export default function CallScreen({
 }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const ambientVideoRef = useRef(null);
   const [seconds, setSeconds] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isSwapped, setIsSwapped] = useState(false);
@@ -46,6 +47,10 @@ export default function CallScreen({
     if (remoteVideoRef.current && mainStream) {
       remoteVideoRef.current.srcObject = mainStream;
       remoteVideoRef.current.play().catch(err => console.error('Main video play error:', err));
+    }
+    if (ambientVideoRef.current && mainStream) {
+      ambientVideoRef.current.srcObject = mainStream;
+      ambientVideoRef.current.play().catch(err => console.error('Ambient video play error:', err));
     }
   }, [mainStream, callType, isSwapped]);
 
@@ -170,15 +175,30 @@ export default function CallScreen({
         </div>
       )}
 
-      {/* 3. Main Canvas: Atmospheric Radial Gradient & Glowing Audio Visualizer */}
-      <div className="relative w-full h-full flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black">
+      {/* 3. Main Canvas: Ambient Dual-Video Blur Background & Primary Foreground Video */}
+      <div className="relative w-full h-full bg-slate-950 overflow-hidden flex items-center justify-center">
         {mainStream && callType === 'video' && !isMainMuted ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={`w-full h-full object-cover ${isSwapped ? 'transform -scale-x-100' : ''}`}
-          />
+          <>
+            {/* Ambient Background Video */}
+            <video
+              ref={ambientVideoRef}
+              autoPlay
+              playsInline
+              muted={true}
+              className={`absolute inset-0 w-full h-full object-cover blur-3xl opacity-40 scale-110 pointer-events-none ${
+                isSwapped ? 'transform -scale-x-100' : ''
+              }`}
+            />
+            {/* Primary Foreground Video */}
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className={`relative z-10 max-h-full max-w-full object-contain rounded-xl shadow-2xl ${
+                isSwapped ? 'transform -scale-x-100' : ''
+              }`}
+            />
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-5 z-10">
             {/* Glowing Ripples Audio Visualizer */}

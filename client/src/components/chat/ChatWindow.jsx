@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useLayoutEffect } from 'react';
-import { Loader2, Server } from 'lucide-react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import { Loader2, Server, ChevronDown } from 'lucide-react';
 import ChatHeader from './ChatHeader';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -29,6 +29,10 @@ export default function ChatWindow({
   const messageEndRef = useRef(null);
   const isFetchingRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const isAtBottomRef = useRef(true);
+  const prevMessagesLengthRef = useRef(chatMessages.length);
 
   const scrollToBottom = (instant = false) => {
     if (chatContainerRef.current) {
@@ -41,9 +45,20 @@ export default function ChatWindow({
     }
   };
 
+  const handleScrollToBottom = () => {
+    scrollToBottom(false);
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
+    setUnreadCount(0);
+  };
+
   useEffect(() => {
     prevScrollHeightRef.current = 0;
     isFetchingRef.current = false;
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
+    setUnreadCount(0);
+    prevMessagesLengthRef.current = chatMessages.length;
     const timer = setTimeout(() => scrollToBottom(true), 50);
     return () => clearTimeout(timer);
   }, [selectedUser]);
@@ -59,16 +74,24 @@ export default function ChatWindow({
     isFetchingRef.current = false;
   }, [chatMessages]);
 
-  // Auto-scroll to bottom on new messages if not loading older history
+  // Auto-scroll to bottom on new messages only if isAtBottom is true
   useEffect(() => {
     if (prevScrollHeightRef.current === 0) {
-      const timer = setTimeout(() => scrollToBottom(false), 50);
-      return () => clearTimeout(timer);
+      if (isAtBottomRef.current) {
+        const timer = setTimeout(() => scrollToBottom(false), 50);
+        return () => clearTimeout(timer);
+      } else {
+        if (chatMessages.length > prevMessagesLengthRef.current) {
+          setUnreadCount(prev => prev + 1);
+        }
+      }
     }
+    prevMessagesLengthRef.current = chatMessages.length;
   }, [chatMessages]);
 
   const handleScroll = (e) => {
     const container = e.target;
+    // Check if scrolled to top for pagination/history loading
     if (container.scrollTop === 0 && !isFetchingRef.current && chatMessages.length > 0) {
       const oldestMsg = chatMessages[0];
       if (oldestMsg && oldestMsg.timestamp && onLoadOlderHistory) {
@@ -76,6 +99,19 @@ export default function ChatWindow({
         prevScrollHeightRef.current = container.scrollHeight;
         onLoadOlderHistory(oldestMsg.timestamp);
       }
+    }
+
+    // Scroll bottom proximity detection
+    const { scrollHeight, scrollTop, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+    if (distanceFromBottom < 100) {
+      setIsAtBottom(true);
+      isAtBottomRef.current = true;
+      setUnreadCount(0);
+    } else {
+      setIsAtBottom(false);
+      isAtBottomRef.current = false;
     }
   };
 
@@ -170,6 +206,22 @@ export default function ChatWindow({
             {activeTypers.map(([user, speed]) => `${user} typing... (${speed || 0} WPM)`).join(", ")}
           </span>
         </div>
+      )}
+
+      {/* Floating Scroll-to-Bottom Button with Unread Badge */}
+      {!isAtBottom && (
+        <button
+          onClick={handleScrollToBottom}
+          className="absolute bottom-20 right-6 z-20 w-10 h-10 rounded-full bg-slate-800/90 backdrop-blur-md border border-slate-700 text-slate-200 hover:text-white hover:bg-slate-700/90 shadow-xl flex items-center justify-center transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 group"
+          title="Scroll to bottom"
+        >
+          <ChevronDown className="w-5 h-5 transition-transform group-hover:translate-y-0.5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center justify-center shadow-md border border-slate-900 animate-bounce">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
       )}
 
       {/* Bottom Message Input Bar */}
