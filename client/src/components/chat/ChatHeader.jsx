@@ -50,20 +50,43 @@ export default function ChatHeader({
         </div>
       </div>
 
-      {/* OTR Toggle Button (only in direct messages) */}
-      {!isGlobal && setIsOffTheRecord && (
-        <button
-          onClick={() => setIsOffTheRecord(!isOffTheRecord)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${
-            isOffTheRecord
-              ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
-              : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
-          }`}
-          title={isOffTheRecord ? "Off-the-Record active (messages will not be saved)" : "Toggle Off-the-Record mode"}
-        >
-          <EyeOff className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{isOffTheRecord ? "OTR Active" : "OTR Mode"}</span>
-        </button>
+      {/* Call Buttons & OTR Toggle Button (only in direct messages) */}
+      {!isGlobal && (
+        <div className="flex items-center gap-2">
+          {onStartCall && (
+            <>
+              <button
+                onClick={() => onStartCall('voice')}
+                className="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 border border-white/10 hover:border-emerald-500/30 transition-all active:scale-95"
+                title="Start Voice Call"
+              >
+                <Phone className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onStartCall('video')}
+                className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 text-zinc-300 hover:text-indigo-400 border border-white/10 hover:border-indigo-500/30 transition-all active:scale-95"
+                title="Start Video Call"
+              >
+                <Video className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
+          {setIsOffTheRecord && (
+            <button
+              onClick={() => setIsOffTheRecord(!isOffTheRecord)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${
+                isOffTheRecord
+                  ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                  : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+              }`}
+              title={isOffTheRecord ? "Off-the-Record active (messages will not be saved)" : "Toggle Off-the-Record mode"}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{isOffTheRecord ? "OTR Active" : "OTR Mode"}</span>
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

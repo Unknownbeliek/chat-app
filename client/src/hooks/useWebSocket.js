@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, onOtrToggle }) {
+export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, onOtrToggle, onCallSignal }) {
   const [isConnecting, setIsConnecting] = useState(true);
   const [onlineCount, setOnlineCount] = useState(1);
   const [registeredUsers, setRegisteredUsers] = useState([]);
@@ -125,10 +125,14 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
             }
             break;
 
-          case 'otr_toggle':
-            if (data.sender && onOtrToggle) {
-              onOtrToggle(data.sender, data.enabled);
-            }
+          case 'call_invite':
+          case 'call_accepted':
+          case 'call_rejected':
+          case 'call_ended':
+          case 'sdp_offer':
+          case 'sdp_answer':
+          case 'ice_candidate':
+            onCallSignal?.(data);
             break;
 
           default:
@@ -142,7 +146,7 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
     return () => {
       ws.current?.close();
     };
-  }, [isLoggedIn, username, getWsUrl, onNotification]);
+  }, [isLoggedIn, username, getWsUrl, onNotification, onCallSignal]);
 
   const sendMessage = useCallback((type, payload) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {

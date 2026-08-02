@@ -5,7 +5,10 @@ import ChatWindow from "./components/chat/ChatWindow";
 import ProfileView from "./components/profile/ProfileView";
 import SettingsView from "./components/settings/SettingsView";
 import ConfirmModal from "./components/common/ConfirmModal";
+import CallModal from "./components/calling/CallModal";
+import CallScreen from "./components/calling/CallScreen";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useWebRTC } from "./hooks/useWebRTC";
 
 export default function Chat() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -93,6 +96,23 @@ export default function Chat() {
     }
   }, [soundEnabled, notificationsEnabled]);
 
+  // WebRTC Calling State
+  const [callState, setCallState] = useState({
+    status: 'idle', // 'idle' | 'ringing' | 'connected'
+    isCaller: false,
+    partnerName: '',
+    callType: 'voice', // 'voice' | 'video'
+    roomId: ''
+  });
+
+  const handleCallSignalRef = useRef(null);
+
+  const handleCallSignal = useCallback(async (data) => {
+    if (handleCallSignalRef.current) {
+      handleCallSignalRef.current(data);
+    }
+  }, []);
+
   // Use Custom Hook for WebSocket Connection
   const {
     isConnecting,
@@ -107,8 +127,123 @@ export default function Chat() {
     isLoggedIn,
     getWsUrl,
     onNotification: handleNotification,
-    onOtrToggle: handleOtrToggleFromPeer
+    onOtrToggle: handleOtrToggleFromPeer,
+    onCallSignal: handleCallSignal
   });
+
+  const sendSignal = useCallback((payload) => {
+    sendMessage(payload.type, payload);
+  }, [sendMessage]);
+
+  const {
+    localStream,
+    remoteStream,
+    isAudioMuted,
+    isVideoMuted,
+    getMedia,
+    createOffer,
+    handleOffer,
+    handleAnswer,
+    handleCandidate,
+    toggleAudio,
+    toggleVideo,
+    cleanupCall
+  } = useWebRTC({ sendSignal });
+
+  // Handle incoming WebSocket WebRTC signals
+  useEffect(() => {
+    handleCallSignalRef.current = async (data) => {
+      switch (data.type) {
+        case 'call_invite':
+          setCallState({
+            status: 'ringing',
+            isCaller: false,
+            partnerName: data.from,
+            callType: data.callType || 'voice',
+            roomId: data.roomId
+          });
+          break;
+
+        case 'call_accepted':
+          setCallState(prev => ({ ...prev, status: 'connected' }));
+          const callerStream = await getMedia(callState.callType);
+          await createOffer(data.from, data.roomId, callerStream);
+          break;
+
+        case 'call_rejected':
+        case 'call_ended':
+          cleanupCall();
+          setCallState({ status: 'idle', isCaller: false, partnerName: '', callType: 'voice', roomId: '' });
+          break;
+
+        case 'sdp_offer':
+          setCallState({
+            status: 'connected',
+            isCaller: false,
+            partnerName: data.from,
+            callType: data.callType || 'voice',
+            roomId: data.roomId
+          });
+          const calleeStream = await getMedia(data.callType || 'voice');
+          await handleOffer(data.from, data.roomId, data.sdp, calleeStream);
+          break;
+
+        case 'sdp_answer':
+          await handleAnswer(data.sdp);
+          break;
+
+        case 'ice_candidate':
+          await handleCandidate(data.candidate);
+          break;
+
+        default:
+          break;
+      }
+    };
+  }, [getMedia, createOffer, handleOffer, handleAnswer, handleCandidate, cleanupCall, callState.callType]);
+
+  const handleStartCall = async (type) => {
+    if (!selectedUser || selectedUser === "Global Chat") return;
+    const roomId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    setCallState({
+      status: 'ringing',
+      isCaller: true,
+      partnerName: selectedUser,
+      callType: type,
+      roomId
+    });
+    sendMessage('call_invite', {
+      to: selectedUser,
+      callType: type,
+      roomId
+    });
+  };
+
+  const handleAcceptCall = async () => {
+    sendMessage('call_accepted', {
+      to: callState.partnerName,
+      roomId: callState.roomId
+    });
+    setCallState(prev => ({ ...prev, status: 'connected' }));
+  };
+
+  const handleRejectCall = () => {
+    sendMessage('call_rejected', {
+      to: callState.partnerName,
+      roomId: callState.roomId
+    });
+    cleanupCall();
+    setCallState({ status: 'idle', isCaller: false, partnerName: '', callType: 'voice', roomId: '' });
+  };
+
+  const handleEndCall = () => {
+    sendMessage('call_ended', {
+      to: callState.partnerName,
+      roomId: callState.roomId
+    });
+    cleanupCall();
+    setCallState({ status: 'idle', isCaller: false, partnerName: '', callType: 'voice', roomId: '' });
+  };
 
   // Check stored user session on load
   useEffect(() => {
@@ -415,10 +550,30 @@ export default function Chat() {
                 });
               }}
               onLoadOlderHistory={handleLoadOlderHistory}
+              onStartCall={handleStartCall}
             />
           )}
         </div>
       </div>
+
+      {/* Incoming / Outgoing Call Ringing Modal */}
+      <CallModal
+        callState={callState}
+        onAccept={handleAcceptCall}
+        onReject={handleRejectCall}
+      />
+
+      {/* Active Call Interface */}
+      <CallScreen
+        callState={callState}
+        localStream={localStream}
+        remoteStream={remoteStream}
+        isAudioMuted={isAudioMuted}
+        isVideoMuted={isVideoMuted}
+        onToggleAudio={toggleAudio}
+        onToggleVideo={toggleVideo}
+        onEndCall={handleEndCall}
+      />
 
       {/* Reusable Confirm Logout Modal */}
       <ConfirmModal
