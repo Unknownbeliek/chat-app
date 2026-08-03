@@ -29,11 +29,18 @@ export function useWebRTC({ sendSignal }) {
       const audioTrack = rawAudioStream.getAudioTracks()[0];
       if (!audioTrack) return rawAudioStream;
 
+      const getCdnUrl = () => {
+        if (typeof window !== 'undefined') {
+          return `${window.location.origin}/models`;
+        }
+        return '/models';
+      };
+
       const processor = new DeepFilterNoiseFilterProcessor({
         noiseReductionLevel: 90,
         enabled: initialEnabled,
         assetConfig: {
-          cdnUrl: 'https://cdn.jsdelivr.net/npm/deepfilternet3-noise-filter@1.3.0/dist'
+          cdnUrl: getCdnUrl()
         }
       });
 
