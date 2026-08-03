@@ -1,4 +1,5 @@
 import { Message } from '../models/Message.js';
+import { Conversation } from '../models/Conversation.js';
 import { activeUsers } from '../services/activeUsers.service.js';
 import { broadcast } from '../services/broadcast.service.js';
 import { handlePingBotQuery } from '../services/pingbot.service.js';
@@ -36,13 +37,50 @@ export async function handleChat(ws, data, currentUsername) {
           timestamp: new Date()
         });
         await newDbMsg.save();
+
+        // Upsert Conversation record for active chats & unread tracking
+        const sortedParticipants = [senderName.toLowerCase(), recipient.toLowerCase()].sort();
+        await Conversation.findOneAndUpdate(
+          { participants: sortedParticipants },
+          {
+            $set: {
+              lastMessage: text,
+              lastMessageSender: senderName,
+              lastMessageAt: new Date()
+            },
+            $inc: {
+              [`unreadCount.${recipient.toLowerCase()}`]: 1
+            },
+            $setOnInsert: {
+              participants: sortedParticipants
+            }
+          },
+          { upsert: true, new: true }
+        );
       } catch (err) {
         console.error('Error saving private message:', err);
       }
     }
 
+    // Send unread update to recipient via WS
     if (recipientUser && recipientUser.ws.readyState === 1) {
       recipientUser.ws.send(payloadStr);
+
+      // Also send unread count update
+      try {
+        const sortedParticipants = [senderName.toLowerCase(), recipient.toLowerCase()].sort();
+        const convo = await Conversation.findOne({ participants: sortedParticipants }).lean();
+        if (convo) {
+          const unread = (convo.unreadCount && convo.unreadCount.get ? convo.unreadCount.get(recipient.toLowerCase()) : convo.unreadCount?.[recipient.toLowerCase()]) || 0;
+          recipientUser.ws.send(JSON.stringify({
+            type: 'unread_update',
+            partner: senderName,
+            unreadCount: unread
+          }));
+        }
+      } catch (err) {
+        console.error('Error sending unread update:', err);
+      }
     }
 
     if (ws.readyState === 1 && targetKey !== (currentUsername ? currentUsername.toLowerCase() : '')) {
@@ -98,6 +136,21 @@ export async function handleChat(ws, data, currentUsername) {
         recipient: recipient,
         enabled: !!enabled
       }));
+    }
+  }
+
+  // 4. Mark conversation as read
+  else if (type === 'mark_read') {
+    const readerName = currentUsername || data.sender;
+    if (!recipient || !readerName) return;
+    try {
+      const sortedParticipants = [readerName.toLowerCase(), recipient.toLowerCase()].sort();
+      await Conversation.findOneAndUpdate(
+        { participants: sortedParticipants },
+        { $set: { [`unreadCount.${readerName.toLowerCase()}`]: 0 } }
+      );
+    } catch (err) {
+      console.error('Error resetting unread count:', err);
     }
   }
 }

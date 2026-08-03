@@ -160,7 +160,9 @@ export default function Chat() {
     chatHistory,
     setChatHistory,
     typingUsers,
-    sendMessage
+    sendMessage,
+    unreadCounts,
+    clearUnread
   } = useWebSocket({
     username,
     isLoggedIn,
@@ -385,6 +387,7 @@ export default function Chat() {
     setActiveTab("chat");
     if (user !== "Global Chat") {
       fetchPrivateHistory(user);
+      clearUnread(user);
     }
   };
 
@@ -558,6 +561,7 @@ export default function Chat() {
             setSearchQuery={setSearchQuery}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
+            unreadCounts={unreadCounts}
           />
         </div>
 

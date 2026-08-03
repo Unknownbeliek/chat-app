@@ -13,7 +13,8 @@ export default function PingSidebar({
   searchQuery,
   setSearchQuery,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  unreadCounts = {}
 }) {
   const filteredUsers = (registeredUsers || []).filter(u =>
     u && u.username && u.username.toLowerCase().includes((searchQuery || '').toLowerCase()) &&
@@ -24,6 +25,22 @@ export default function PingSidebar({
     const list = chatHistory[channelName] || [];
     return list[list.length - 1];
   };
+
+  // Sort active chats by latest message timestamp (most recent first)
+  const getActiveChats = () => {
+    return filteredUsers
+      .filter(u => chatHistory[u.username] && chatHistory[u.username].length > 0)
+      .sort((a, b) => {
+        const lastA = getLastMsg(a.username);
+        const lastB = getLastMsg(b.username);
+        const timeA = lastA?.timestamp ? new Date(lastA.timestamp).getTime() : 0;
+        const timeB = lastB?.timestamp ? new Date(lastB.timestamp).getTime() : 0;
+        return timeB - timeA;
+      });
+  };
+
+  const activeChats = activeTab === "chats" ? getActiveChats() : [];
+  const contactsList = activeTab === "contacts" ? filteredUsers : [];
 
   return (
     <aside className="w-full md:w-80 h-full flex flex-col glass-panel border-r border-white/10 overflow-hidden">
@@ -69,50 +86,53 @@ export default function PingSidebar({
         <div className="px-3 pt-3 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
           <span>{activeTab === "chats" ? "Active Chats" : "All Contacts"}</span>
           <span className="text-[10px] text-zinc-500 font-mono">
-            {activeTab === "chats"
-              ? filteredUsers.filter(u => chatHistory[u.username] && chatHistory[u.username].length > 0).length
-              : filteredUsers.length}
+            {activeTab === "chats" ? activeChats.length : contactsList.length}
           </span>
         </div>
 
         {/* User Items */}
-        {filteredUsers
-          .filter(u => {
-            if (activeTab === "chats") {
-              // In Chats tab, only show users with active history
-              const hasHistory = chatHistory[u.username] && chatHistory[u.username].length > 0;
-              return hasHistory;
-            }
-            // In Contacts tab, show all registered users
-            return true;
-          })
-          .map((u) => (
-            <ContactItem
-              key={u._id || u.username}
-              name={u.username}
-              isOnline={u.isOnline}
-              isSelected={selectedUser === u.username}
-              onClick={() => onSelectContact(u.username)}
-              lastMessage={getLastMsg(u.username)}
-              bio={u.bio}
-              avatarColor={u.avatarColor}
-              avatarUrl={u.avatarUrl}
-            />
-          ))}
+        {activeTab === "chats" && activeChats.map((u) => (
+          <ContactItem
+            key={u._id || u.username}
+            name={u.username}
+            isOnline={u.isOnline}
+            isSelected={selectedUser === u.username}
+            onClick={() => onSelectContact(u.username)}
+            lastMessage={getLastMsg(u.username)}
+            bio={u.bio}
+            avatarColor={u.avatarColor}
+            avatarUrl={u.avatarUrl}
+            unreadCount={unreadCounts[u.username.toLowerCase()] || 0}
+          />
+        ))}
+
+        {activeTab === "contacts" && contactsList.map((u) => (
+          <ContactItem
+            key={u._id || u.username}
+            name={u.username}
+            isOnline={u.isOnline}
+            isSelected={selectedUser === u.username}
+            onClick={() => onSelectContact(u.username)}
+            lastMessage={getLastMsg(u.username)}
+            bio={u.bio}
+            avatarColor={u.avatarColor}
+            avatarUrl={u.avatarUrl}
+            unreadCount={unreadCounts[u.username.toLowerCase()] || 0}
+          />
+        ))}
 
         {/* Empty state for Chats tab when no active DMs exist */}
-        {activeTab === "chats" &&
-          filteredUsers.filter(u => chatHistory[u.username] && chatHistory[u.username].length > 0).length === 0 && (
-            <div className="p-4 text-center text-xs text-zinc-500 space-y-1">
-              <p>No active direct chats yet.</p>
-              <button
-                onClick={() => setActiveTab("contacts")}
-                className="text-indigo-400 font-medium hover:underline cursor-pointer"
-              >
-                Explore Contacts →
-              </button>
-            </div>
-          )}
+        {activeTab === "chats" && activeChats.length === 0 && (
+          <div className="p-4 text-center text-xs text-zinc-500 space-y-1">
+            <p>No active direct chats yet.</p>
+            <button
+              onClick={() => setActiveTab("contacts")}
+              className="text-indigo-400 font-medium hover:underline cursor-pointer"
+            >
+              Explore Contacts →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Floating Bottom Navigation Tabs */}

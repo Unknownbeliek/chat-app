@@ -7,8 +7,16 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password || username.trim().length < 2 || password.trim().length < 4) {
-      return res.status(400).json({ error: 'Username (min 2 chars) and password (min 4 chars) are required.' });
+    if (!username || !password || username.trim().length < 2) {
+      return res.status(400).json({ error: 'Username (min 2 chars) and password are required.' });
+    }
+
+    // Strong password validation: min 8 chars, 1 uppercase, 1 number, 1 special char
+    const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!strongPasswordRegex.test(password)) {
+      return res.status(400).json({
+        error: 'Password must be at least 8 characters with one uppercase letter, one number, and one special character (@$!%*?&).'
+      });
     }
 
     const cleanUsername = username.trim();

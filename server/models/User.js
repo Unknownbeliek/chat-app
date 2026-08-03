@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   location: { type: String, default: "" },
   avatarColor: { type: String, default: "" },
   avatarUrl: { type: String, default: "" },
+  isOnline: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -10,7 +10,8 @@ export default function ContactItem({
   lastMessage,
   bio,
   avatarColor,
-  avatarUrl
+  avatarUrl,
+  unreadCount = 0
 }) {
   return (
     <button
@@ -33,11 +34,18 @@ export default function ContactItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1 mb-0.5">
           <span className="font-semibold text-sm text-zinc-100 truncate">{name}</span>
-          {lastMessage?.timestamp && (
-            <span className="text-[10px] text-zinc-400 font-mono flex-shrink-0">
-              {formatTimestamp(lastMessage.timestamp)}
-            </span>
-          )}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {lastMessage?.timestamp && (
+              <span className="text-[10px] text-zinc-400 font-mono">
+                {formatTimestamp(lastMessage.timestamp)}
+              </span>
+            )}
+            {unreadCount > 0 && (
+              <span className="bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-xs text-zinc-400 truncate max-w-[180px]">
           {lastMessage ? lastMessage.message : (bio || "Available")}

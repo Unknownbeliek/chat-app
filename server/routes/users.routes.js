@@ -8,7 +8,7 @@ const router = express.Router();
 // REST Endpoint: Get All Registered Users with Online Status
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({}, 'username bio status location avatarColor avatarUrl createdAt').lean();
+    const users = await User.find({}, 'username bio status location avatarColor avatarUrl lastSeen createdAt').lean();
     const onlineList = Array.from(activeUsers.values()).map(u => u.originalName.toLowerCase());
 
     const result = users.map(u => ({
@@ -19,7 +19,8 @@ router.get('/users', async (req, res) => {
       avatarColor: u.avatarColor || '',
       avatarUrl: u.avatarUrl || '',
       createdAt: u.createdAt,
-      isOnline: onlineList.includes(u.username.toLowerCase())
+      isOnline: onlineList.includes(u.username.toLowerCase()),
+      lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
     }));
 
     res.json({

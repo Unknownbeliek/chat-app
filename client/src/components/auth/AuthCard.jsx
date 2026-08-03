@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function AuthCard({
   authMode,
@@ -11,6 +12,8 @@ export default function AuthCard({
   isLoading,
   onSubmit
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Glow Blobs */}
@@ -75,14 +78,33 @@ export default function AuthCard({
             <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
               Password
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full glass-input px-4 py-3 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full glass-input px-4 py-3 pr-12 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10 transition-all duration-200"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4.5 h-4.5 transition-transform duration-200 scale-100" />
+                ) : (
+                  <Eye className="w-4.5 h-4.5 transition-transform duration-200 scale-100" />
+                )}
+              </button>
+            </div>
+            {authMode === "register" && (
+              <p className="mt-1.5 text-[10px] text-zinc-500">
+                Min 8 chars, 1 uppercase, 1 number, 1 special (@$!%*?&)
+              </p>
+            )}
           </div>
 
           {authError && (

@@ -3,6 +3,24 @@ import { EyeOff, ChevronLeft, Phone, Video } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import StatusBadge from '../common/StatusBadge';
 
+/**
+ * Format a "last seen" timestamp into a human-readable relative string.
+ */
+function formatLastSeen(lastSeen) {
+  if (!lastSeen) return '';
+  const now = Date.now();
+  const then = new Date(lastSeen).getTime();
+  const diffSec = Math.floor((now - then) / 1000);
+  if (diffSec < 60) return 'Last seen just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `Last seen ${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `Last seen ${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return 'Last seen yesterday';
+  return `Last seen ${diffDays}d ago`;
+}
+
 export default function ChatHeader({
   selectedUser,
   onlineCount,
@@ -17,6 +35,8 @@ export default function ChatHeader({
 
   const isInCallWithUser = !isGlobal && callState && callState.status !== 'idle' && callState.partnerName?.toLowerCase() === selectedUser?.toLowerCase();
   const userCallStatus = isInCallWithUser ? (callState.status === 'ringing' ? 'calling' : 'in_call') : null;
+
+  const isOnline = isGlobal || targetUserInfo?.isOnline;
 
   return (
     <div className="glass-header px-4 py-3 border-b border-white/10 flex items-center justify-between sticky top-0 z-20">
@@ -35,7 +55,7 @@ export default function ChatHeader({
           customColor={targetUserInfo?.avatarColor}
           avatarUrl={targetUserInfo?.avatarUrl}
           size="md"
-          isOnline={isGlobal || targetUserInfo?.isOnline}
+          isOnline={isOnline}
           showBadge={!isGlobal}
         />
 
@@ -52,7 +72,10 @@ export default function ChatHeader({
           <p className="text-xs text-zinc-400">
             {isGlobal
               ? "Public broadcast channel"
-              : (targetUserInfo?.bio || "Direct Message")}
+              : targetUserInfo?.isOnline
+                ? (targetUserInfo?.bio || "Direct Message")
+                : formatLastSeen(targetUserInfo?.lastSeen)
+            }
           </p>
         </div>
       </div>

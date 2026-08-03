@@ -6,6 +6,7 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
   const [registeredUsers, setRegisteredUsers] = useState([]);
   const [chatHistory, setChatHistory] = useState({ "Global Chat": [] });
   const [typingUsers, setTypingUsers] = useState({});
+  const [unreadCounts, setUnreadCounts] = useState({}); // { partnerUsername: count }
   const ws = useRef(null);
 
   useEffect(() => {
@@ -42,6 +43,19 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
             setRegisteredUsers(data.users);
             if (data.onlineCount !== undefined) {
               setOnlineCount(data.onlineCount);
+            }
+            break;
+
+          case 'userStatusChanged':
+            // Real-time update of a single user's online/lastSeen status
+            if (data.username) {
+              setRegisteredUsers(prev =>
+                prev.map(u =>
+                  u.username.toLowerCase() === data.username.toLowerCase()
+                    ? { ...u, isOnline: data.isOnline, lastSeen: data.lastSeen }
+                    : u
+                )
+              );
             }
             break;
 
@@ -109,6 +123,16 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
             break;
           }
 
+          case 'unread_update':
+            // Server pushed unread count update for a specific partner
+            if (data.partner && typeof data.unreadCount === 'number') {
+              setUnreadCounts(prev => ({
+                ...prev,
+                [data.partner.toLowerCase()]: data.unreadCount
+              }));
+            }
+            break;
+
           case 'typing_wpm':
             if (data.sender && data.sender.toLowerCase() !== username.toLowerCase()) {
               setTypingUsers(prev => ({
@@ -154,6 +178,18 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
     }
   }, []);
 
+  // Clear unread count for a partner locally
+  const clearUnread = useCallback((partner) => {
+    if (!partner) return;
+    setUnreadCounts(prev => {
+      const copy = { ...prev };
+      delete copy[partner.toLowerCase()];
+      return copy;
+    });
+    // Also tell server to reset unread
+    sendMessage('mark_read', { recipient: partner });
+  }, [sendMessage]);
+
   return {
     isConnecting,
     onlineCount,
@@ -161,6 +197,8 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
     chatHistory,
     setChatHistory,
     typingUsers,
-    sendMessage
+    sendMessage,
+    unreadCounts,
+    clearUnread
   };
 }
