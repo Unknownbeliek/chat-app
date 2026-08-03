@@ -128,7 +128,7 @@ export default function MessageInput({
       <button
         type="submit"
         disabled={disabled || !inputMessage.trim()}
-        className="w-11 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 flex-shrink-0"
+        className="w-11 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex-shrink-0"
         title="Send Message"
       >
         <svg className="w-5 h-5 fill-current transform rotate-45 -translate-x-0.5" viewBox="0 0 24 24">

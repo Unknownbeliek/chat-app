@@ -15,10 +15,10 @@ export default function ContactItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center gap-3 transition-all duration-200 border-l-2 ${
+      className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 ease-out hover:scale-[1.01] hover:bg-slate-800/60 hover:border-slate-600/50 border-l-2 ${
         isSelected
           ? "border-indigo-500 bg-indigo-600/30 text-white shadow-lg shadow-indigo-500/10 backdrop-blur-md border-t border-r border-b border-t-white/10 border-r-white/10 border-b-white/10"
-          : "border-transparent hover:bg-white/5 border-t border-r border-b border-transparent"
+          : "border-transparent border-t border-r border-b border-transparent"
       }`}
     >
       <Avatar
