@@ -18,9 +18,14 @@ export default function CallScreen({
   const ambientVideoRef = useRef(null);
   const [seconds, setSeconds] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isSwapped, setIsSwapped] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   const { partnerName, callType, status } = callState;
+
+  // Toggle rotation through 0 -> 90 -> 180 -> 270 -> 0
+  const toggleRotation = () => {
+    setRotation(prev => (prev + 90) % 360);
+  };
 
   // Track call duration timer
   useEffect(() => {
@@ -38,29 +43,25 @@ export default function CallScreen({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Attach streams to video elements dynamically based on swapped state
-  const mainStream = isSwapped ? localStream : remoteStream;
-  const miniStream = isSwapped ? remoteStream : localStream;
-  const isMainMuted = isSwapped ? isVideoMuted : false;
-  const isMiniMuted = isSwapped ? false : isVideoMuted;
-
+  // Attach remote stream to remote & ambient video elements
   useEffect(() => {
-    if (remoteVideoRef.current && mainStream) {
-      remoteVideoRef.current.srcObject = mainStream;
-      remoteVideoRef.current.play().catch(err => console.error('Main video play error:', err));
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(err => console.error('Remote video play error:', err));
     }
-    if (ambientVideoRef.current && mainStream) {
-      ambientVideoRef.current.srcObject = mainStream;
+    if (ambientVideoRef.current && remoteStream) {
+      ambientVideoRef.current.srcObject = remoteStream;
       ambientVideoRef.current.play().catch(err => console.error('Ambient video play error:', err));
     }
-  }, [mainStream, callType, isSwapped]);
+  }, [remoteStream, callType]);
 
+  // Attach local stream to local PIP video element
   useEffect(() => {
-    if (localVideoRef.current && miniStream) {
-      localVideoRef.current.srcObject = miniStream;
-      localVideoRef.current.play().catch(err => console.error('Mini video play error:', err));
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(err => console.error('Local video play error:', err));
     }
-  }, [miniStream, callType, isSwapped, isVideoMuted]);
+  }, [localStream, callType, isVideoMuted]);
 
   if (status !== 'connected') return null;
 
@@ -107,7 +108,8 @@ export default function CallScreen({
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                className="w-full h-full object-cover"
+                style={{ transform: `rotate(${rotation}deg)` }}
+                className="w-full h-full object-cover transition-transform duration-300 ease-in-out"
               />
             ) : (
               <div className="text-center text-xs text-slate-400 font-medium">
@@ -155,13 +157,13 @@ export default function CallScreen({
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       {/* 2. Sleek Call Info Pill Header */}
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-slate-900/80 backdrop-blur-sm border border-slate-800 rounded-full px-4 py-1.5 flex items-center gap-3 shadow-lg z-20">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 bg-slate-900/70 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full text-xs text-white shadow-lg flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="text-xs font-medium text-slate-200">{partnerName}</span>
-        <span className="text-xs text-slate-400 font-mono font-semibold">| {formatTime(seconds)}</span>
+        <span className="font-medium text-slate-200">{partnerName}</span>
+        <span className="text-slate-400 font-mono font-semibold">| {formatTime(seconds)}</span>
         <button
           onClick={() => setIsMinimized(true)}
-          className="ml-1 p-1 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          className="ml-1 p-1 rounded-full hover:bg-slate-800/80 text-slate-400 hover:text-white transition-colors"
           title="Minimize Call"
         >
           <Minimize2 className="w-3.5 h-3.5" />
@@ -170,7 +172,7 @@ export default function CallScreen({
 
       {/* Connection State Reconnecting Overlay Toast */}
       {isReconnecting && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-amber-500/20 border border-amber-500/40 text-amber-300 px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg backdrop-blur-md z-30 animate-pulse">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-500/20 border border-amber-500/40 text-amber-300 px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg backdrop-blur-md z-30 animate-pulse">
           <AlertTriangle className="w-4 h-4 text-amber-400" />
           <span>Reconnecting Video Stream...</span>
         </div>
@@ -178,7 +180,7 @@ export default function CallScreen({
 
       {/* 3. Main Canvas: Ambient Dual-Video Blur Background & Primary Foreground Video */}
       <div className="relative w-full h-full bg-slate-950 overflow-hidden flex items-center justify-center">
-        {mainStream && callType === 'video' && !isMainMuted ? (
+        {remoteStream && callType === 'video' ? (
           <>
             {/* Ambient Background Video */}
             <video
@@ -186,18 +188,16 @@ export default function CallScreen({
               autoPlay
               playsInline
               muted={true}
-              className={`absolute inset-0 w-full h-full object-cover blur-3xl opacity-40 scale-110 pointer-events-none ${
-                isSwapped ? 'transform -scale-x-100' : ''
-              }`}
+              style={{ transform: `rotate(${rotation}deg)` }}
+              className="transition-transform duration-300 ease-in-out absolute inset-0 w-full h-full object-cover blur-3xl opacity-40 scale-110 pointer-events-none"
             />
             {/* Primary Foreground Video */}
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className={`relative z-10 max-h-full max-w-full object-contain rounded-xl shadow-2xl ${
-                isSwapped ? 'transform -scale-x-100' : ''
-              }`}
+              style={{ transform: `rotate(${rotation}deg)` }}
+              className="transition-transform duration-300 ease-in-out relative z-10 max-h-full max-w-full object-contain rounded-xl shadow-2xl"
             />
           </>
         ) : (
@@ -221,35 +221,27 @@ export default function CallScreen({
         )}
 
         {/* 4. Self-View Picture-in-Picture (PiP) Thumbnail */}
-        {miniStream && callType === 'video' && (
-          <div
-            onClick={() => setIsSwapped(!isSwapped)}
-            className="absolute bottom-24 right-6 w-36 h-52 sm:w-44 sm:h-60 rounded-xl overflow-hidden border border-slate-600/80 shadow-2xl transition-all duration-300 opacity-90 hover:opacity-100 hover:scale-105 hover:border-indigo-400 bg-slate-950 z-10 cursor-pointer group"
-            title="Click to swap video streams"
-          >
-            {!isMiniMuted ? (
+        {localStream && callType === 'video' && (
+          <div className="absolute bottom-6 right-6 w-36 h-52 md:w-44 md:h-60 rounded-2xl overflow-hidden border-2 border-white/15 shadow-2xl z-30 bg-slate-900">
+            {!isVideoMuted ? (
               <video
                 ref={localVideoRef}
                 autoPlay
                 playsInline
-                muted={!isSwapped}
-                className={`w-full h-full object-cover ${!isSwapped ? 'transform -scale-x-100' : ''}`}
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-400 text-xs font-semibold">
                 Camera Off
               </div>
             )}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5 backdrop-blur-xs">
-              <RefreshCw className="w-4 h-4" />
-              <span>Swap</span>
-            </div>
           </div>
         )}
       </div>
 
       {/* 1. Floating Glass Control Dock */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-full px-6 py-3 shadow-2xl flex items-center gap-6 z-20">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-slate-900/80 backdrop-blur-xl border border-slate-700/60 p-3 rounded-full shadow-2xl flex items-center gap-3">
         {/* Toggle Mic */}
         <button
           onClick={onToggleAudio}
@@ -278,12 +270,12 @@ export default function CallScreen({
           </button>
         )}
 
-        {/* Swap Streams Button */}
+        {/* Rotate / Refresh Video Button */}
         {callType === 'video' && (
           <button
-            onClick={() => setIsSwapped(!isSwapped)}
+            onClick={toggleRotation}
             className="w-11 h-11 rounded-full bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50 flex items-center justify-center transition-all"
-            title="Swap Video Streams"
+            title="Rotate Video"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
@@ -301,3 +293,4 @@ export default function CallScreen({
     </div>
   );
 }
+
