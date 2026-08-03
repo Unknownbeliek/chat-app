@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Minimize2, Maximize2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Minimize2, Maximize2, RefreshCw, AlertTriangle, Sparkles } from 'lucide-react';
 import { MicIcon, VideoIcon, EndCallIcon } from '../animated-icons';
 
 export default function CallScreen({
@@ -8,9 +8,11 @@ export default function CallScreen({
   remoteStream,
   isAudioMuted,
   isVideoMuted,
+  isNoiseCancellationEnabled = false,
   iceState,
   onToggleAudio,
   onToggleVideo,
+  onToggleNoiseCancellation,
   onEndCall
 }) {
   const localVideoRef = useRef(null);
@@ -133,15 +135,34 @@ export default function CallScreen({
             className={`p-2 rounded-xl transition-all border cursor-pointer ${
               isAudioMuted ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700/50 hover:bg-slate-700/80'
             }`}
+            title={isAudioMuted ? 'Unmute Mic' : 'Mute Mic'}
           >
             {isAudioMuted ? <MicOff className="w-4 h-4 pointer-events-none" /> : <Mic className="w-4 h-4 pointer-events-none" />}
           </button>
+
+          {/* AI Noise Cancellation Mini Toggle */}
+          <button
+            onClick={onToggleNoiseCancellation}
+            className={`p-2 rounded-xl transition-all border cursor-pointer relative ${
+              isNoiseCancellationEnabled
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.4)]'
+                : 'bg-slate-800/80 text-slate-400 border-slate-700/50 hover:bg-slate-700/80 hover:text-slate-200'
+            }`}
+            title={isNoiseCancellationEnabled ? 'AI Noise Cancellation: Active' : 'Enable AI Noise Cancellation'}
+          >
+            <Sparkles className="w-4 h-4 pointer-events-none" />
+            {isNoiseCancellationEnabled && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+            )}
+          </button>
+
           {callType === 'video' && (
             <button
               onClick={onToggleVideo}
               className={`p-2 rounded-xl transition-all border cursor-pointer ${
                 isVideoMuted ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700/50 hover:bg-slate-700/80'
               }`}
+              title={isVideoMuted ? 'Turn Camera On' : 'Turn Camera Off'}
             >
               {isVideoMuted ? <VideoOff className="w-4 h-4 pointer-events-none" /> : <Video className="w-4 h-4 pointer-events-none" />}
             </button>
@@ -161,6 +182,12 @@ export default function CallScreen({
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
         <span className="font-medium text-slate-200">{partnerName}</span>
         <span className="text-slate-400 font-mono font-semibold">| {formatTime(seconds)}</span>
+        {isNoiseCancellationEnabled && (
+          <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30 ml-1">
+            <Sparkles className="w-3 h-3 text-purple-300 animate-pulse" />
+            <span>AI Filter</span>
+          </span>
+        )}
         <button
           onClick={() => setIsMinimized(true)}
           className="ml-1 p-1 rounded-full hover:bg-slate-800/80 text-slate-400 hover:text-white transition-colors cursor-pointer"
@@ -253,6 +280,22 @@ export default function CallScreen({
           title={isAudioMuted ? 'Unmute Mic' : 'Mute Mic'}
         >
           <MicIcon isMuted={isAudioMuted} className="w-5 h-5 pointer-events-none" />
+        </button>
+
+        {/* AI Noise Cancellation Toggle */}
+        <button
+          onClick={onToggleNoiseCancellation}
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${
+            isNoiseCancellationEnabled
+              ? 'bg-purple-600/30 text-purple-300 border border-purple-500/60 shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:bg-purple-600/40'
+              : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-700/80 border border-slate-700/50'
+          }`}
+          title={isNoiseCancellationEnabled ? 'AI Noise Cancellation: Active' : 'Enable AI Noise Cancellation'}
+        >
+          <Sparkles className={`w-5 h-5 pointer-events-none ${isNoiseCancellationEnabled ? 'animate-pulse text-purple-300' : ''}`} />
+          {isNoiseCancellationEnabled && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping" />
+          )}
         </button>
 
         {/* Toggle Camera (Only for video calls) */}

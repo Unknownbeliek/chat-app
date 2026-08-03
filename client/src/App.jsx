@@ -183,6 +183,7 @@ export default function Chat() {
     remoteStream,
     isAudioMuted,
     isVideoMuted,
+    isNoiseCancellationEnabled,
     iceState,
     mediaError,
     getMedia,
@@ -192,6 +193,7 @@ export default function Chat() {
     handleCandidate,
     toggleAudio,
     toggleVideo,
+    toggleNoiseCancellation,
     cleanupCall
   } = useWebRTC({ sendSignal });
 
@@ -653,9 +655,11 @@ export default function Chat() {
         remoteStream={remoteStream}
         isAudioMuted={isAudioMuted}
         isVideoMuted={isVideoMuted}
+        isNoiseCancellationEnabled={isNoiseCancellationEnabled}
         iceState={iceState}
         onToggleAudio={toggleAudio}
         onToggleVideo={toggleVideo}
+        onToggleNoiseCancellation={toggleNoiseCancellation}
         onEndCall={handleEndCall}
       />
 

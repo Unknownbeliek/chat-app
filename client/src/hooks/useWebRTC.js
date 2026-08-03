@@ -1,4 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
+import { DeepFilterNet3Core } from 'deepfilternet3-noise-filter';
+
+// Alias for standard named interface matching specs
+const DeepFilterNet3Processor = DeepFilterNet3Core;
 
 const ICE_SERVERS = {
   iceServers: [
@@ -13,11 +17,69 @@ export function useWebRTC({ sendSignal }) {
   const [remoteStream, setRemoteStream] = useState(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [isNoiseCancellationEnabled, setIsNoiseCancellationEnabled] = useState(false);
   const [iceState, setIceState] = useState('new');
   const [mediaError, setMediaError] = useState(null);
 
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
+  const rawStreamRef = useRef(null);
+  const noiseProcessorRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const cleanStreamRef = useRef(null);
+
+  // Core setup function for AI Noise Cancellation
+  const setupNoiseCancellation = useCallback(async (rawAudioStream) => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx({ sampleRate: 48000 });
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      audioContextRef.current = ctx;
+
+      const proc = new DeepFilterNet3Processor({ sampleRate: 48000, noiseReductionLevel: 50 });
+      await proc.initialize();
+      noiseProcessorRef.current = proc;
+
+      const node = await proc.createAudioWorkletNode(ctx);
+      const source = ctx.createMediaStreamSource(rawAudioStream);
+      const destination = ctx.createMediaStreamDestination();
+
+      source.connect(node);
+      node.connect(destination);
+
+      cleanStreamRef.current = destination.stream;
+      return destination.stream;
+    } catch (err) {
+      console.error('Failed to setup AI noise cancellation:', err);
+      // Fall back to raw stream if noise processing setup fails
+      return rawAudioStream;
+    }
+  }, []);
+
+  // Teardown noise processor
+  const destroyNoiseCancellation = useCallback(() => {
+    if (noiseProcessorRef.current) {
+      try {
+        noiseProcessorRef.current.destroy();
+      } catch (err) {
+        console.error('Error destroying noise processor:', err);
+      }
+      noiseProcessorRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        if (audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
+      } catch (err) {
+        console.error('Error closing audio context:', err);
+      }
+      audioContextRef.current = null;
+    }
+    cleanStreamRef.current = null;
+  }, []);
 
   // Initialize or retrieve media devices
   const getMedia = useCallback(async (callType) => {
@@ -35,10 +97,23 @@ export function useWebRTC({ sendSignal }) {
         audio: true,
         video: callType === 'video' ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false
       };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      localStreamRef.current = stream;
-      setLocalStream(stream);
-      return stream;
+      const rawStream = await navigator.mediaDevices.getUserMedia(constraints);
+      rawStreamRef.current = rawStream;
+
+      let streamToUse = rawStream;
+      if (isNoiseCancellationEnabled) {
+        const cleanStream = await setupNoiseCancellation(rawStream);
+        // Combine video track from raw stream with clean audio track
+        const tracks = [
+          ...cleanStream.getAudioTracks(),
+          ...rawStream.getVideoTracks()
+        ];
+        streamToUse = new MediaStream(tracks);
+      }
+
+      localStreamRef.current = streamToUse;
+      setLocalStream(streamToUse);
+      return streamToUse;
     } catch (err) {
       console.error('Error accessing media devices:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -52,18 +127,53 @@ export function useWebRTC({ sendSignal }) {
       // Fallback to audio-only if video fails
       if (callType === 'video') {
         try {
-          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          localStreamRef.current = audioStream;
-          setLocalStream(audioStream);
+          const rawAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          rawStreamRef.current = rawAudioStream;
+
+          let audioStreamToUse = rawAudioStream;
+          if (isNoiseCancellationEnabled) {
+            audioStreamToUse = await setupNoiseCancellation(rawAudioStream);
+          }
+
+          localStreamRef.current = audioStreamToUse;
+          setLocalStream(audioStreamToUse);
           setMediaError(null);
-          return audioStream;
+          return audioStreamToUse;
         } catch (audioErr) {
           console.error('Error accessing audio device:', audioErr);
         }
       }
       return null;
     }
-  }, []);
+  }, [isNoiseCancellationEnabled, setupNoiseCancellation]);
+
+  // Dynamic toggle of Noise Cancellation during active call or before call
+  const toggleNoiseCancellation = useCallback(async () => {
+    const nextState = !isNoiseCancellationEnabled;
+    setIsNoiseCancellationEnabled(nextState);
+
+    // If an active PeerConnection exists, dynamically swap the audio track
+    if (pcRef.current && rawStreamRef.current) {
+      const audioSender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (nextState) {
+        // Enable noise cancellation
+        const cleanStream = await setupNoiseCancellation(rawStreamRef.current);
+        const cleanAudioTrack = cleanStream.getAudioTracks()[0];
+        if (audioSender && cleanAudioTrack) {
+          await audioSender.replaceTrack(cleanAudioTrack);
+        }
+      } else {
+        // Disable noise cancellation and restore raw mic audio track
+        destroyNoiseCancellation();
+        const rawAudioTrack = rawStreamRef.current.getAudioTracks()[0];
+        if (audioSender && rawAudioTrack) {
+          await audioSender.replaceTrack(rawAudioTrack);
+        }
+      }
+    } else if (!nextState) {
+      destroyNoiseCancellation();
+    }
+  }, [isNoiseCancellationEnabled, setupNoiseCancellation, destroyNoiseCancellation]);
 
   // Initialize RTCPeerConnection
   const initPeerConnection = useCallback((targetUser, roomId, stream) => {
@@ -191,6 +301,12 @@ export function useWebRTC({ sendSignal }) {
 
   // Cleanup and End Call
   const cleanupCall = useCallback(() => {
+    destroyNoiseCancellation();
+
+    if (rawStreamRef.current) {
+      rawStreamRef.current.getTracks().forEach(track => track.stop());
+      rawStreamRef.current = null;
+    }
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
@@ -205,15 +321,19 @@ export function useWebRTC({ sendSignal }) {
     setIsVideoMuted(false);
     setIceState('new');
     setMediaError(null);
-  }, []);
+  }, [destroyNoiseCancellation]);
 
   return {
     localStream,
     remoteStream,
     isAudioMuted,
     isVideoMuted,
+    isNoiseCancellationEnabled,
     iceState,
     mediaError,
+    noiseProcessorRef,
+    setupNoiseCancellation,
+    toggleNoiseCancellation,
     getMedia,
     createOffer,
     handleOffer,
