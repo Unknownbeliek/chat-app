@@ -33,7 +33,7 @@ export function useWebRTC({ sendSignal }) {
         noiseReductionLevel: 90,
         enabled: initialEnabled,
         assetConfig: {
-          cdnUrl: 'https://unpkg.com/deepfilternet3-noise-filter/dist'
+          cdnUrl: 'https://cdn.jsdelivr.net/npm/deepfilternet3-noise-filter@1.3.0/dist'
         }
       });
 
