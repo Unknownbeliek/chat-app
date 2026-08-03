@@ -290,7 +290,7 @@ export function useWebRTC({ sendSignal }) {
     isNoiseCancellationEnabled,
     iceState,
     mediaError,
-    noiseProcessorRef,
+    noiseFilterProcessorRef,
     setupNoiseCancellation,
     toggleNoiseCancellation,
     getMedia,
