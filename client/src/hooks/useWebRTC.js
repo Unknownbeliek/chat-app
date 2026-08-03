@@ -31,7 +31,10 @@ export function useWebRTC({ sendSignal }) {
 
       const processor = new DeepFilterNoiseFilterProcessor({
         noiseReductionLevel: 90,
-        enabled: initialEnabled
+        enabled: initialEnabled,
+        assetConfig: {
+          cdnUrl: 'https://unpkg.com/deepfilternet3-noise-filter/dist'
+        }
       });
 
       await processor.init({ mediaStreamTrack: audioTrack });
