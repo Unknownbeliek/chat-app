@@ -1,2 +1,15 @@
-// Directory for motion-first animated icons from itshover.com
-export {};
+"use client";
+export { default as MicIcon } from './MicIcon';
+export { default as VideoIcon } from './VideoIcon';
+export { default as ScreenShareIcon } from './ScreenShareIcon';
+export { default as EndCallIcon } from './EndCallIcon';
+export { default as SendIcon } from './SendIcon';
+export { default as ScrollBottomIcon } from './ScrollBottomIcon';
+export { default as ChatsIcon } from './ChatsIcon';
+export { default as ContactsIcon } from './ContactsIcon';
+export { default as ProfileIcon } from './ProfileIcon';
+export { default as SettingsIcon } from './SettingsIcon';
+export { default as GithubIcon } from './GithubIcon';
+export { default as BellIcon } from './BellIcon';
+export { default as InfoIcon } from './InfoIcon';
+export { default as LogOutIcon } from './LogOutIcon';

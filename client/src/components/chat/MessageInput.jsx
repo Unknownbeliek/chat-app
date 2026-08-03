@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Paperclip } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
+import { SendIcon } from '../animated-icons';
 
 export default function MessageInput({
   inputMessage,
@@ -131,9 +132,7 @@ export default function MessageInput({
         className="w-11 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex-shrink-0"
         title="Send Message"
       >
-        <svg className="w-5 h-5 fill-current transform rotate-45 -translate-x-0.5" viewBox="0 0 24 24">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-        </svg>
+        <SendIcon className="w-5 h-5" />
       </button>
     </form>
   );

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Minimize2, Maximize2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { MicIcon, VideoIcon, EndCallIcon } from '../animated-icons';
 
 export default function CallScreen({
   callState,
@@ -259,7 +260,7 @@ export default function CallScreen({
           }`}
           title={isAudioMuted ? 'Unmute Mic' : 'Mute Mic'}
         >
-          {isAudioMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          <MicIcon isMuted={isAudioMuted} className="w-5 h-5" />
         </button>
 
         {/* Toggle Camera (Only for video calls) */}
@@ -273,7 +274,7 @@ export default function CallScreen({
             }`}
             title={isVideoMuted ? 'Turn Camera On' : 'Turn Camera Off'}
           >
-            {isVideoMuted ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            <VideoIcon isMuted={isVideoMuted} className="w-5 h-5" />
           </button>
         )}
 
@@ -294,7 +295,7 @@ export default function CallScreen({
           className="w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-all hover:scale-105 active:scale-95"
           title="End Call"
         >
-          <PhoneOff className="w-6 h-6 transform rotate-[135deg]" />
+          <EndCallIcon className="w-6 h-6" />
         </button>
       </div>
     </div>
