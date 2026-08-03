@@ -37,7 +37,7 @@ export default function AuthCard({
           <button
             type="button"
             onClick={() => setAuthMode("login")}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               authMode === "login"
                 ? "bg-indigo-600 text-white shadow-md"
                 : "text-zinc-400 hover:text-zinc-200"
@@ -48,7 +48,7 @@ export default function AuthCard({
           <button
             type="button"
             onClick={() => setAuthMode("register")}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               authMode === "register"
                 ? "bg-indigo-600 text-white shadow-md"
                 : "text-zinc-400 hover:text-zinc-200"
@@ -90,13 +90,13 @@ export default function AuthCard({
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10 transition-all duration-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10 transition-all duration-200 cursor-pointer"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
-                  <EyeOff className="w-4.5 h-4.5 transition-transform duration-200 scale-100" />
+                  <EyeOff className="w-4.5 h-4.5 transition-transform duration-200 scale-100 pointer-events-none" />
                 ) : (
-                  <Eye className="w-4.5 h-4.5 transition-transform duration-200 scale-100" />
+                  <Eye className="w-4.5 h-4.5 transition-transform duration-200 scale-100 pointer-events-none" />
                 )}
               </button>
             </div>
@@ -116,7 +116,7 @@ export default function AuthCard({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 disabled:opacity-50 transition-all duration-200"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
           >
             {isLoading
               ? "Authenticating..."

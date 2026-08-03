@@ -25,10 +25,10 @@ export default function ProfileView({
         <div className="flex items-center gap-3">
           <button
             onClick={onBackToChats}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold shadow-sm transition-all active:scale-95 group"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold shadow-sm transition-all active:scale-95 group cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400 transform group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Chat</span>
+            <ChevronLeft className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400 transform group-hover:-translate-x-0.5 transition-transform pointer-events-none" />
+            <span className="pointer-events-none">Back to Chat</span>
           </button>
           <h2 className="font-bold text-lg text-zinc-100">User Profile</h2>
         </div>
@@ -75,7 +75,7 @@ export default function ProfileView({
                 <button
                   type="button"
                   onClick={() => setProfile({ ...profile, avatarUrl: "" })}
-                  className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                  className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors cursor-pointer"
                 >
                   Use Initials Instead
                 </button>
@@ -86,7 +86,7 @@ export default function ProfileView({
               <button
                 type="button"
                 onClick={() => setProfile({ ...profile, avatarUrl: "" })}
-                className={`relative group rounded-full aspect-square flex flex-col items-center justify-center border-2 transition-all duration-200 ${
+                className={`relative group rounded-full aspect-square flex flex-col items-center justify-center border-2 transition-all duration-200 cursor-pointer ${
                   !profile.avatarUrl
                     ? "border-indigo-500 ring-2 ring-indigo-500/40 scale-105"
                     : "border-white/10 hover:border-white/30 hover:scale-105"
@@ -94,11 +94,11 @@ export default function ProfileView({
                 style={{ backgroundColor: getUsernameColor(username, profile.avatarColor) }}
                 title="Default (Initials)"
               >
-                <span className="font-bold text-xs text-white">
+                <span className="font-bold text-xs text-white pointer-events-none">
                   {getInitials(username)}
                 </span>
                 {!profile.avatarUrl && (
-                  <div className="absolute inset-0 bg-indigo-600/40 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-0 bg-indigo-600/40 rounded-full flex items-center justify-center pointer-events-none">
                     <Check className="w-4 h-4 text-white drop-shadow-md" />
                   </div>
                 )}
@@ -112,7 +112,7 @@ export default function ProfileView({
                     type="button"
                     key={avatar}
                     onClick={() => setProfile({ ...profile, avatarUrl: avatar })}
-                    className={`relative rounded-full aspect-square overflow-hidden border-2 transition-all duration-200 group ${
+                    className={`relative rounded-full aspect-square overflow-hidden border-2 transition-all duration-200 group cursor-pointer ${
                       isSelected
                         ? "border-indigo-500 ring-2 ring-indigo-500/40 scale-105 shadow-lg shadow-indigo-500/30"
                         : "border-transparent hover:border-white/40 hover:scale-105 opacity-80 hover:opacity-100"
@@ -121,10 +121,10 @@ export default function ProfileView({
                     <img
                       src={avatar}
                       alt={`Avatar ${idx + 1}`}
-                      className="w-full h-full object-cover rounded-full"
+                      className="w-full h-full object-cover rounded-full pointer-events-none"
                     />
                     {isSelected && (
-                      <div className="absolute inset-0 bg-indigo-600/40 rounded-full flex items-center justify-center backdrop-blur-[1px]">
+                      <div className="absolute inset-0 bg-indigo-600/40 rounded-full flex items-center justify-center backdrop-blur-[1px] pointer-events-none">
                         <Check className="w-4 h-4 text-white drop-shadow-md" />
                       </div>
                     )}
@@ -183,7 +183,7 @@ export default function ProfileView({
                   type="button"
                   key={color}
                   onClick={() => setProfile({ ...profile, avatarColor: color })}
-                  className={`w-8 h-8 rounded-full border-2 transition-transform duration-150 ${
+                  className={`w-8 h-8 rounded-full border-2 transition-transform duration-150 cursor-pointer ${
                     profile.avatarColor === color ? "scale-110 border-white shadow-lg" : "border-transparent"
                   }`}
                   style={{ backgroundColor: color }}
@@ -201,7 +201,7 @@ export default function ProfileView({
             <button
               type="submit"
               disabled={isSaving}
-              className="ml-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 disabled:opacity-50 transition-all active:scale-95"
+              className="ml-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
             >
               {isSaving ? "Saving..." : "Save Profile"}
             </button>

@@ -90,17 +90,17 @@ export default function MessageInput({
             type="button"
             disabled={disabled}
             onClick={() => alert("Attachment upload coming soon!")}
-            className="p-1 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-white/10 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all"
+            className="p-1 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-white/10 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
             title="Attach Files / Media"
           >
-            <Paperclip className="w-4 h-4" />
+            <Paperclip className="w-4 h-4 pointer-events-none" />
           </button>
 
           <button
             type="button"
             disabled={disabled}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="text-base text-zinc-400 hover:text-amber-400 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all leading-none"
+            className="text-base text-zinc-400 hover:text-amber-400 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all leading-none cursor-pointer"
             title="Choose Emoji"
           >
             😀
@@ -119,7 +119,7 @@ export default function MessageInput({
         />
 
         {wpm > 0 && !disabled && (
-          <span className="absolute right-3 text-[10px] text-indigo-400 font-mono bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/30">
+          <span className="absolute right-3 text-[10px] text-indigo-400 font-mono bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/30 select-none pointer-events-none">
             {wpm} WPM
           </span>
         )}
@@ -129,10 +129,10 @@ export default function MessageInput({
       <button
         type="submit"
         disabled={disabled || !inputMessage.trim()}
-        className="w-11 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex-shrink-0"
+        className="w-11 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex-shrink-0 cursor-pointer"
         title="Send Message"
       >
-        <SendIcon className="w-5 h-5" />
+        <SendIcon className="w-5 h-5 pointer-events-none" />
       </button>
     </form>
   );

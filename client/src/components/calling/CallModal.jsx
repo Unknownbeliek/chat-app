@@ -58,20 +58,20 @@ export default function CallModal({ callState, onAccept, onReject, mediaError })
           {/* Reject / Hang up */}
           <button
             onClick={onReject}
-            className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all hover:scale-110 active:scale-95"
+            className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 transition-all hover:scale-110 active:scale-95 cursor-pointer"
             title="Decline"
           >
-            <PhoneOff className="w-6 h-6 transform rotate-[135deg]" />
+            <PhoneOff className="w-6 h-6 transform rotate-[135deg] pointer-events-none" />
           </button>
 
           {/* Accept (only shown to Callee) */}
           {!isCaller && (
             <button
               onClick={onAccept}
-              className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 transition-all hover:scale-110 active:scale-95 animate-bounce"
+              className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 transition-all hover:scale-110 active:scale-95 animate-bounce cursor-pointer"
               title="Accept Call"
             >
-              <Phone className="w-6 h-6" />
+              <Phone className="w-6 h-6 pointer-events-none" />
             </button>
           )}
         </div>

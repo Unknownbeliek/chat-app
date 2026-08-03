@@ -26,6 +26,8 @@ export async function handleChat(ws, data, currentUsername) {
     };
     const payloadStr = JSON.stringify(payloadObj);
 
+    let updatedUnread = 1;
+
     if (!isOffTheRecord) {
       try {
         const newDbMsg = new Message({
@@ -40,7 +42,7 @@ export async function handleChat(ws, data, currentUsername) {
 
         // Upsert Conversation record for active chats & unread tracking
         const sortedParticipants = [senderName.toLowerCase(), recipient.toLowerCase()].sort();
-        await Conversation.findOneAndUpdate(
+        const updatedConvo = await Conversation.findOneAndUpdate(
           { participants: sortedParticipants },
           {
             $set: {
@@ -55,32 +57,30 @@ export async function handleChat(ws, data, currentUsername) {
               participants: sortedParticipants
             }
           },
-          { upsert: true, new: true }
+          { upsert: true, new: true, lean: true }
         );
+
+        if (updatedConvo && updatedConvo.unreadCount) {
+          const uMap = updatedConvo.unreadCount;
+          updatedUnread = typeof uMap.get === 'function'
+            ? (uMap.get(recipient.toLowerCase()) || 1)
+            : (uMap[recipient.toLowerCase()] || 1);
+        }
       } catch (err) {
         console.error('Error saving private message:', err);
       }
     }
 
-    // Send unread update to recipient via WS
+    // Send message payload to recipient via WS
     if (recipientUser && recipientUser.ws.readyState === 1) {
       recipientUser.ws.send(payloadStr);
 
       // Also send unread count update
-      try {
-        const sortedParticipants = [senderName.toLowerCase(), recipient.toLowerCase()].sort();
-        const convo = await Conversation.findOne({ participants: sortedParticipants }).lean();
-        if (convo) {
-          const unread = (convo.unreadCount && convo.unreadCount.get ? convo.unreadCount.get(recipient.toLowerCase()) : convo.unreadCount?.[recipient.toLowerCase()]) || 0;
-          recipientUser.ws.send(JSON.stringify({
-            type: 'unread_update',
-            partner: senderName,
-            unreadCount: unread
-          }));
-        }
-      } catch (err) {
-        console.error('Error sending unread update:', err);
-      }
+      recipientUser.ws.send(JSON.stringify({
+        type: 'unread_update',
+        partner: senderName,
+        unreadCount: updatedUnread
+      }));
     }
 
     if (ws.readyState === 1 && targetKey !== (currentUsername ? currentUsername.toLowerCase() : '')) {

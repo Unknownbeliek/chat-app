@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, onOtrToggle, onCallSignal }) {
+export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onNotification, onOtrToggle, onCallSignal }) {
   const [isConnecting, setIsConnecting] = useState(true);
   const [onlineCount, setOnlineCount] = useState(1);
   const [registeredUsers, setRegisteredUsers] = useState([]);
@@ -8,6 +8,12 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
   const [typingUsers, setTypingUsers] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({}); // { partnerUsername: count }
   const ws = useRef(null);
+
+  // Keep ref to selectedUser to avoid stale closure in WebSocket listener
+  const selectedUserRef = useRef(selectedUser);
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   useEffect(() => {
     if (!isLoggedIn || !username) return;
@@ -47,7 +53,6 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
             break;
 
           case 'userStatusChanged':
-            // Real-time update of a single user's online/lastSeen status
             if (data.username) {
               setRegisteredUsers(prev =>
                 prev.map(u =>
@@ -117,18 +122,26 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
               };
             });
 
+            // Increment unread count locally if it's an incoming message and sender is NOT the currently active chat
             if (!isMe) {
+              if (rawPartner.toLowerCase() !== selectedUserRef.current?.toLowerCase()) {
+                setUnreadCounts(prev => ({
+                  ...prev,
+                  [rawPartner.toLowerCase()]: (prev[rawPartner.toLowerCase()] || 0) + 1
+                }));
+              }
               onNotification?.(data.sender, data.message);
             }
             break;
           }
 
           case 'unread_update':
-            // Server pushed unread count update for a specific partner
             if (data.partner && typeof data.unreadCount === 'number') {
+              // If the partner is currently open in active chat, keep unread at 0
+              const isCurrentlyOpen = data.partner.toLowerCase() === selectedUserRef.current?.toLowerCase();
               setUnreadCounts(prev => ({
                 ...prev,
-                [data.partner.toLowerCase()]: data.unreadCount
+                [data.partner.toLowerCase()]: isCurrentlyOpen ? 0 : data.unreadCount
               }));
             }
             break;
@@ -178,7 +191,6 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
     }
   }, []);
 
-  // Clear unread count for a partner locally
   const clearUnread = useCallback((partner) => {
     if (!partner) return;
     setUnreadCounts(prev => {
@@ -186,7 +198,6 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
       delete copy[partner.toLowerCase()];
       return copy;
     });
-    // Also tell server to reset unread
     sendMessage('mark_read', { recipient: partner });
   }, [sendMessage]);
 
@@ -199,6 +210,7 @@ export function useWebSocket({ username, isLoggedIn, getWsUrl, onNotification, o
     typingUsers,
     sendMessage,
     unreadCounts,
+    setUnreadCounts,
     clearUnread
   };
 }

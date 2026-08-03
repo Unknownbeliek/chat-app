@@ -85,17 +85,17 @@ export default function CallScreen({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsMinimized(false)}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-700/50"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-700/50 cursor-pointer"
               title="Expand Call"
             >
-              <Maximize2 className="w-4 h-4" />
+              <Maximize2 className="w-4 h-4 pointer-events-none" />
             </button>
             <button
               onClick={onEndCall}
-              className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30"
+              className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30 cursor-pointer"
               title="End Call"
             >
-              <PhoneOff className="w-4 h-4" />
+              <PhoneOff className="w-4 h-4 pointer-events-none" />
             </button>
           </div>
         </div>
@@ -130,20 +130,20 @@ export default function CallScreen({
         <div className="flex items-center justify-around pt-1 border-t border-slate-800">
           <button
             onClick={onToggleAudio}
-            className={`p-2 rounded-xl transition-all border ${
+            className={`p-2 rounded-xl transition-all border cursor-pointer ${
               isAudioMuted ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700/50 hover:bg-slate-700/80'
             }`}
           >
-            {isAudioMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {isAudioMuted ? <MicOff className="w-4 h-4 pointer-events-none" /> : <Mic className="w-4 h-4 pointer-events-none" />}
           </button>
           {callType === 'video' && (
             <button
               onClick={onToggleVideo}
-              className={`p-2 rounded-xl transition-all border ${
+              className={`p-2 rounded-xl transition-all border cursor-pointer ${
                 isVideoMuted ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700/50 hover:bg-slate-700/80'
               }`}
             >
-              {isVideoMuted ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+              {isVideoMuted ? <VideoOff className="w-4 h-4 pointer-events-none" /> : <Video className="w-4 h-4 pointer-events-none" />}
             </button>
           )}
         </div>
@@ -163,10 +163,10 @@ export default function CallScreen({
         <span className="text-slate-400 font-mono font-semibold">| {formatTime(seconds)}</span>
         <button
           onClick={() => setIsMinimized(true)}
-          className="ml-1 p-1 rounded-full hover:bg-slate-800/80 text-slate-400 hover:text-white transition-colors"
+          className="ml-1 p-1 rounded-full hover:bg-slate-800/80 text-slate-400 hover:text-white transition-colors cursor-pointer"
           title="Minimize Call"
         >
-          <Minimize2 className="w-3.5 h-3.5" />
+          <Minimize2 className="w-3.5 h-3.5 pointer-events-none" />
         </button>
       </div>
 
@@ -245,28 +245,28 @@ export default function CallScreen({
         {/* Toggle Mic */}
         <button
           onClick={onToggleAudio}
-          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${
             isAudioMuted
               ? 'bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20'
               : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50'
           }`}
           title={isAudioMuted ? 'Unmute Mic' : 'Mute Mic'}
         >
-          <MicIcon isMuted={isAudioMuted} className="w-5 h-5" />
+          <MicIcon isMuted={isAudioMuted} className="w-5 h-5 pointer-events-none" />
         </button>
 
         {/* Toggle Camera (Only for video calls) */}
         {callType === 'video' && (
           <button
             onClick={onToggleVideo}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${
               isVideoMuted
                 ? 'bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20'
                 : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50'
             }`}
             title={isVideoMuted ? 'Turn Camera On' : 'Turn Camera Off'}
           >
-            <VideoIcon isMuted={isVideoMuted} className="w-5 h-5" />
+            <VideoIcon isMuted={isVideoMuted} className="w-5 h-5 pointer-events-none" />
           </button>
         )}
 
@@ -274,23 +274,22 @@ export default function CallScreen({
         {callType === 'video' && (
           <button
             onClick={toggleRotation}
-            className="w-11 h-11 rounded-full bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50 flex items-center justify-center transition-all"
+            className="w-11 h-11 rounded-full bg-slate-800/80 text-slate-200 hover:bg-slate-700/80 border border-slate-700/50 flex items-center justify-center transition-all cursor-pointer"
             title="Rotate Video"
           >
-            <RefreshCw className="w-5 h-5" />
+            <RefreshCw className="w-5 h-5 pointer-events-none" />
           </button>
         )}
 
         {/* End Call Button */}
         <button
           onClick={onEndCall}
-          className="w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-all hover:scale-105 active:scale-95"
+          className="w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           title="End Call"
         >
-          <EndCallIcon className="w-6 h-6" />
+          <EndCallIcon className="w-6 h-6 pointer-events-none" />
         </button>
       </div>
     </div>
   );
 }
-

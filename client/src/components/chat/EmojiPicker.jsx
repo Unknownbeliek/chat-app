@@ -68,7 +68,7 @@ const EMOJI_CATEGORIES = [
     name: '💡 Objects',
     emojis: [
       '🔥', '✨', '⚡', '💥', '🌟', '⭐', '🎈', '🎉', '🎊', '🎁', '🏆', '🏅', '🥇', '👑',
-      '💎', '💡', '🔦', '🕯️', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🕹️', '💽', '💾',
+      '💎', '💡', 'flashlight', '🕯️', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🕹️', '💽', '💾',
       '🎧', '🎤', '🎙️', '📻', '🎷', '🪗', '🎸', '🎹', '🎺', '🎻', '🪕', '🥁', '🪘', '🎬'
     ]
   },
@@ -78,7 +78,7 @@ const EMOJI_CATEGORIES = [
     emojis: [
       '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕',
       '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯',
-      '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑'
+      '🕎', '☯️', '☦️', '🛐', '<ctrl42>', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑'
     ]
   }
 ];
@@ -98,7 +98,7 @@ export default function EmojiPicker({ onEmojiSelect, onClose }) {
       {/* Header Search Bar */}
       <div className="p-3 border-b border-white/10 flex items-center gap-2 bg-white/5">
         <div className="relative flex-1 flex items-center">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-3" />
+          <Search className="w-4 h-4 text-zinc-400 absolute left-3 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -109,9 +109,9 @@ export default function EmojiPicker({ onEmojiSelect, onClose }) {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 text-zinc-400 hover:text-white"
+              className="absolute right-2 text-zinc-400 hover:text-white cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5 pointer-events-none" />
             </button>
           )}
         </div>
@@ -124,7 +124,7 @@ export default function EmojiPicker({ onEmojiSelect, onClose }) {
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-2.5 py-1 rounded-xl text-xs whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer ${
                 activeCategory === cat.id
                   ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 font-semibold shadow-sm'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
@@ -146,7 +146,7 @@ export default function EmojiPicker({ onEmojiSelect, onClose }) {
                 key={idx}
                 type="button"
                 onClick={() => onEmojiSelect(emoji)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 hover:scale-125 active:scale-95 transition-all p-1 group"
+                className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 hover:scale-125 active:scale-95 transition-all p-1 group cursor-pointer"
                 title={emoji}
               >
                 <img
@@ -162,7 +162,7 @@ export default function EmojiPicker({ onEmojiSelect, onClose }) {
                     }
                   }}
                 />
-                <span className="hidden text-xl select-none">{emoji}</span>
+                <span className="hidden text-xl select-none pointer-events-none">{emoji}</span>
               </button>
             );
           })}

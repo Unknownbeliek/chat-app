@@ -213,12 +213,12 @@ export default function ChatWindow({
       {!isAtBottom && (
         <button
           onClick={handleScrollToBottom}
-          className="absolute bottom-20 right-6 z-20 w-10 h-10 rounded-full bg-slate-800/90 backdrop-blur-md border border-slate-700 text-slate-200 hover:text-white hover:bg-slate-700/90 shadow-xl flex items-center justify-center transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 animate-in fade-in slide-in-from-bottom-2 group"
+          className="absolute bottom-20 right-6 z-20 w-10 h-10 rounded-full bg-slate-800/90 backdrop-blur-md border border-slate-700 text-slate-200 hover:text-white hover:bg-slate-700/90 shadow-xl flex items-center justify-center transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 animate-in fade-in slide-in-from-bottom-2 group cursor-pointer"
           title="Scroll to bottom"
         >
-          <ScrollBottomIcon className="w-5 h-5" />
+          <ScrollBottomIcon className="w-5 h-5 pointer-events-none" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center justify-center shadow-md border border-slate-900 animate-bounce">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center justify-center shadow-md border border-slate-900 animate-bounce pointer-events-none">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}

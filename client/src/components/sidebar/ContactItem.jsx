@@ -1,6 +1,7 @@
 import React from 'react';
 import Avatar from '../common/Avatar';
 import { formatTimestamp } from '../../utils/dateUtils';
+import { formatLastSeen } from '../chat/ChatHeader';
 
 export default function ContactItem({
   name,
@@ -11,12 +12,19 @@ export default function ContactItem({
   bio,
   avatarColor,
   avatarUrl,
-  unreadCount = 0
+  unreadCount = 0,
+  lastSeen
 }) {
+  const getSubtext = () => {
+    if (lastMessage) return lastMessage.message;
+    if (isOnline) return bio || "Available";
+    return formatLastSeen(lastSeen) || bio || "Offline";
+  };
+
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 ease-out hover:scale-[1.01] hover:bg-slate-800/60 hover:border-slate-600/50 border-l-2 ${
+      className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 ease-out hover:scale-[1.01] hover:bg-slate-800/60 hover:border-slate-600/50 border-l-2 cursor-pointer ${
         isSelected
           ? "border-indigo-500 bg-indigo-600/30 text-white shadow-lg shadow-indigo-500/10 backdrop-blur-md border-t border-r border-b border-t-white/10 border-r-white/10 border-b-white/10"
           : "border-transparent border-t border-r border-b border-transparent"
@@ -48,7 +56,7 @@ export default function ContactItem({
           </div>
         </div>
         <p className="text-xs text-zinc-400 truncate max-w-[180px]">
-          {lastMessage ? lastMessage.message : (bio || "Available")}
+          {getSubtext()}
         </p>
       </div>
     </button>

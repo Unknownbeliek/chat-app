@@ -29,7 +29,12 @@ export default function PingSidebar({
   // Sort active chats by latest message timestamp (most recent first)
   const getActiveChats = () => {
     return filteredUsers
-      .filter(u => chatHistory[u.username] && chatHistory[u.username].length > 0)
+      .filter(u => {
+        const uLower = u.username.toLowerCase();
+        const hasHistory = chatHistory[u.username] && chatHistory[u.username].length > 0;
+        const hasUnread = (unreadCounts[uLower] || 0) > 0;
+        return hasHistory || hasUnread;
+      })
       .sort((a, b) => {
         const lastA = getLastMsg(a.username);
         const lastB = getLastMsg(b.username);
@@ -103,6 +108,7 @@ export default function PingSidebar({
             avatarColor={u.avatarColor}
             avatarUrl={u.avatarUrl}
             unreadCount={unreadCounts[u.username.toLowerCase()] || 0}
+            lastSeen={u.lastSeen}
           />
         ))}
 
@@ -118,6 +124,7 @@ export default function PingSidebar({
             avatarColor={u.avatarColor}
             avatarUrl={u.avatarUrl}
             unreadCount={unreadCounts[u.username.toLowerCase()] || 0}
+            lastSeen={u.lastSeen}
           />
         ))}
 

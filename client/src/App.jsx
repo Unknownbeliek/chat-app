@@ -162,10 +162,12 @@ export default function Chat() {
     typingUsers,
     sendMessage,
     unreadCounts,
+    setUnreadCounts,
     clearUnread
   } = useWebSocket({
     username,
     isLoggedIn,
+    selectedUser,
     getWsUrl,
     onNotification: handleNotification,
     onOtrToggle: handleOtrToggleFromPeer,
@@ -351,11 +353,31 @@ export default function Chat() {
       // Ignore network errors gracefully
     }
   };
+  const fetchActiveChats = async () => {
+    if (!username) return;
+    try {
+      const res = await fetch(`${getApiUrl()}/api/chats/active?username=${encodeURIComponent(username)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.conversations) {
+        const countsMap = {};
+        data.conversations.forEach(c => {
+          if (c.partner && c.unreadCount > 0) {
+            countsMap[c.partner.toLowerCase()] = c.unreadCount;
+          }
+        });
+        setUnreadCounts(prev => ({ ...prev, ...countsMap }));
+      }
+    } catch (e) {
+      // Ignore network errors gracefully
+    }
+  };
 
   useEffect(() => {
     if (isLoggedIn && username) {
       fetchUsers();
       fetchUserProfile(username);
+      fetchActiveChats();
     }
   }, [isLoggedIn, username]);
 
