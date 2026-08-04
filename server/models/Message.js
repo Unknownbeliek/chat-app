@@ -8,6 +8,11 @@ const messageSchema = new mongoose.Schema({
   isOffTheRecord: { type: Boolean, default: false },
   isBotResponse: { type: Boolean, default: false },
   status: { type: String, enum: ['sent', 'delivered', 'read'], default: 'sent' },
+  replyTo: {
+    id: String,
+    sender: String,
+    message: String
+  },
   timestamp: { type: Date, default: Date.now }
 });
 

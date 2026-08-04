@@ -79,7 +79,7 @@ const markdownComponents = {
     );
   },
   p({ children }) {
-    return <p className="mb-1 last:mb-0 inline-block w-full font-normal leading-relaxed text-[13.5px]">{children}</p>;
+    return <div className="mb-1 last:mb-0 inline-block w-full font-normal leading-relaxed text-[13.5px]">{children}</div>;
   },
   table({ children }) {
     return (
@@ -168,201 +168,309 @@ export default function MessageBubble({
     u => u && u.username && u.username.toLowerCase() === senderName.toLowerCase()
   );
 
-  // Touch Gesture & Context Menu States
-  const [showContextMenu, setShowContextMenu] = useState(false);
+  // Touch & Mouse Drag Gesture States
+  const [isFocusSpotlight, setIsFocusSpotlight] = useState(false);
   const [reaction, setReaction] = useState(messageData.reaction || null);
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const touchStartPos = useRef({ x: 0, y: 0 });
+  const startPos = useRef({ x: 0, y: 0 });
   const touchTimer = useRef(null);
   const lastTapTime = useRef(0);
 
   const rawMessageText = messageData.message || '';
   const isAutoCode = isLikelyRawCode(rawMessageText);
 
-  const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+  // Drag Start (Touch & Mouse)
+  const handleStart = (clientX, clientY) => {
+    startPos.current = { x: clientX, y: clientY };
+    setIsDragging(true);
 
     touchTimer.current = setTimeout(() => {
-      setShowContextMenu(true);
-      if (window.navigator.vibrate) window.navigator.vibrate(50);
-    }, 500);
+      setIsFocusSpotlight(true);
+      if (window.navigator.vibrate) window.navigator.vibrate(40);
+    }, 450);
   };
 
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartPos.current.x;
-    const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
+  // Drag Move
+  const handleMove = (clientX, clientY) => {
+    if (!isDragging) return;
+    const deltaX = clientX - startPos.current.x;
+    const deltaY = Math.abs(clientY - startPos.current.y);
 
-    if (deltaY > 10 || Math.abs(deltaX) > 10) {
+    if (deltaY > 15 || Math.abs(deltaX) > 10) {
       if (touchTimer.current) clearTimeout(touchTimer.current);
     }
 
-    if (deltaX > 0 && deltaX < 80 && deltaY < 20) {
-      setSwipeOffset(deltaX);
+    if (deltaX > 0 && deltaY < 30) {
+      // Rubberband physics
+      const maxDrag = 120;
+      const resistance = deltaX > 50 ? 50 + (deltaX - 50) * 0.35 : deltaX;
+      setSwipeOffset(Math.min(resistance, maxDrag));
     }
   };
 
-  const handleTouchEnd = () => {
+  // Drag End
+  const handleEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
     if (touchTimer.current) clearTimeout(touchTimer.current);
 
-    if (swipeOffset > 60) {
+    if (swipeOffset >= 40) {
       if (onReply) onReply(messageData);
-      if (window.navigator.vibrate) window.navigator.vibrate(30);
+      if (window.navigator.vibrate) window.navigator.vibrate(35);
     }
     setSwipeOffset(0);
 
     const now = Date.now();
     if (now - lastTapTime.current < 300) {
-      setReaction(prev => prev === "❤️" ? null : "❤️");
-      if (window.navigator.vibrate) window.navigator.vibrate([30, 30]);
+      setIsFocusSpotlight(true);
+      if (window.navigator.vibrate) window.navigator.vibrate([25, 25]);
     }
     lastTapTime.current = now;
   };
 
   const copyMessage = () => {
     navigator.clipboard.writeText(rawMessageText);
-    setShowContextMenu(false);
+    setIsFocusSpotlight(false);
   };
 
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={{ transform: `translateX(${swipeOffset}px)` }}
-      className={`flex items-end gap-2 text-left msg-enter transition-transform duration-100 relative group ${
-        isGrouped ? "mt-1 mb-0.5" : "mt-2.5 mb-1"
-      } ${isMe ? "flex-row-reverse" : "flex-row"}`}
-    >
-      {/* Swipe Reply Visual Indicator */}
-      {swipeOffset > 20 && (
-        <div className="absolute left-[-30px] top-1/2 -translate-y-1/2 text-indigo-400 opacity-80 flex items-center gap-1 text-xs">
-          <Reply className="w-4 h-4" />
-        </div>
-      )}
-
-      {/* Sender Avatar */}
-      {!isGrouped && !isMe ? (
-        <Avatar
-          name={isBot ? "PingBot" : senderName}
-          customColor={isBot ? "#8b5cf6" : senderUser?.avatarColor}
-          avatarUrl={isBot ? undefined : senderUser?.avatarUrl}
-          size="sm"
-        />
-      ) : !isMe ? (
-        <div className="w-7 flex-shrink-0" />
-      ) : null}
-
-      {/* Message Bubble Container */}
-      <div className={`max-w-[85%] sm:max-w-[70%] flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
-        {/* Sender Name Label */}
-        {!isGrouped && !isMe && (
-          <div className="flex items-center gap-1.5 mb-1 px-1 select-none">
-            <span className="text-[11px] font-semibold text-indigo-300/90 tracking-wide">
-              {isBot ? "🤖 PingBot" : senderName}
-            </span>
-            {isOtr && (
-              <span className="text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md font-mono">
-                🕵️ OTR
-              </span>
-            )}
+    <>
+      <div
+        onTouchStart={e => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={e => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={handleEnd}
+        onMouseDown={e => handleStart(e.clientX, e.clientY)}
+        onMouseMove={e => isDragging && handleMove(e.clientX, e.clientY)}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+        style={{
+          transform: `translateX(${swipeOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}
+        className={`flex items-end gap-2 text-left msg-enter relative group select-none cursor-grab active:cursor-grabbing ${
+          isGrouped ? "mt-1 mb-0.5" : "mt-2.5 mb-1"
+        } ${isMe ? "flex-row-reverse" : "flex-row"}`}
+      >
+        {/* Swipe Reply Circular Badge Indicator */}
+        {swipeOffset > 8 && (
+          <div
+            style={{
+              opacity: Math.min(swipeOffset / 40, 1),
+              transform: `scale(${Math.min(0.6 + swipeOffset / 80, 1.1)})`
+            }}
+            className={`absolute left-[-42px] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+              swipeOffset >= 40
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/50 scale-110 ring-2 ring-indigo-400"
+                : "bg-slate-800 text-indigo-300 border border-white/10"
+            }`}
+          >
+            <Reply className="w-4 h-4" />
           </div>
         )}
 
-        {/* Message Content Bubble */}
-        <div
-          className={`px-3.5 py-2 rounded-2xl text-[13.5px] leading-relaxed break-words transition-all relative overflow-hidden select-text shadow-md ${
-            messageData.isWhisper || messageData.whisper
-              ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-400/50 text-purple-100 rounded-tl-xs shadow-purple-950/40"
-              : messageData.isAction
-              ? "bg-amber-950/40 border border-amber-500/30 text-amber-200 italic rounded-tl-xs"
-              : isMe
-              ? "bg-gradient-to-br from-indigo-600/95 via-indigo-500/95 to-violet-600/95 text-white rounded-tr-xs shadow-indigo-500/25 border border-indigo-400/30 backdrop-blur-md"
-              : isBot
-              ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-500/40 text-purple-100 rounded-tl-xs shadow-purple-900/40"
-              : "bg-slate-900/85 border border-white/12 text-slate-100 rounded-tl-xs shadow-black/30 backdrop-blur-xl"
-          } ${isOtr ? "border-dashed border-amber-400/50 bg-amber-950/30" : ""}`}
-        >
-          {(messageData.isWhisper || messageData.whisper) && (
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-purple-300 border-b border-purple-500/30 pb-1 mb-1.5">
-              <span>🤫 Ephemeral Whisper</span>
-              <span className="text-[9px] bg-purple-900/60 px-1.5 py-0.5 rounded text-purple-200 font-mono">10s TTL</span>
+        {/* Sender Avatar */}
+        {!isGrouped && !isMe ? (
+          <Avatar
+            name={isBot ? "PingBot" : senderName}
+            customColor={isBot ? "#8b5cf6" : senderUser?.avatarColor}
+            avatarUrl={isBot ? undefined : senderUser?.avatarUrl}
+            size="sm"
+          />
+        ) : !isMe ? (
+          <div className="w-7 flex-shrink-0" />
+        ) : null}
+
+        {/* Message Bubble Container */}
+        <div className={`max-w-[85%] sm:max-w-[70%] flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
+          {/* Sender Name Label */}
+          {!isGrouped && !isMe && (
+            <div className="flex items-center gap-1.5 mb-1 px-1 select-none">
+              <span className="text-[11px] font-semibold text-indigo-300/90 tracking-wide">
+                {isBot ? "🤖 PingBot" : senderName}
+              </span>
+              {isOtr && (
+                <span className="text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md font-mono">
+                  🕵️ OTR
+                </span>
+              )}
             </div>
           )}
 
-          <div className="text-[13.5px] font-normal leading-relaxed text-slate-100">
-            {isAutoCode ? (
-              <CodeBlockContainer language="javascript" codeString={rawMessageText} />
-            ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                {rawMessageText}
-              </ReactMarkdown>
-            )}
-          </div>
-
-          {/* Bottom Right Timestamp & Status Indicator */}
-          <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-75 font-mono select-none tracking-wider">
-            <span>{formatTimestamp(messageData.timestamp)}</span>
-            {isMe && (
-              messageData.status === 'read' || messageData.isRead ? (
-                <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline-block drop-shadow-[0_0_4px_rgba(34,211,238,0.6)]" title="Read" />
-              ) : messageData.status === 'delivered' || messageData.isDelivered ? (
-                <CheckCheck className="w-3.5 h-3.5 text-white/80 inline-block" title="Delivered" />
-              ) : (
-                <Check className="w-3.5 h-3.5 text-white/60 inline-block" title="Sent" />
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Reaction Badge */}
-        {reaction && (
-          <span className="absolute -bottom-2 right-2 bg-slate-900 border border-slate-700 text-xs px-1.5 py-0.5 rounded-full shadow-lg animate-bounce select-none">
-            {reaction}
-          </span>
-        )}
-
-        {/* Contextual Action Menu Overlay / Modal */}
-        {showContextMenu && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in" onClick={() => setShowContextMenu(false)}>
-            <div className="bg-slate-900 border border-white/10 rounded-2xl p-2 w-64 shadow-2xl space-y-1" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-around p-2 border-b border-white/10 text-xl">
-                {['❤️', '👍', '🔥', '😂', '😮'].map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => { setReaction(emoji); setShowContextMenu(false); }}
-                    className="hover:scale-125 transition-transform p-1 cursor-pointer"
-                  >
-                    {emoji}
-                  </button>
-                ))}
+          {/* Message Content Bubble */}
+          <div
+            className={`px-3.5 py-2 rounded-2xl text-[13.5px] leading-relaxed break-words transition-all relative overflow-hidden select-text shadow-md ${
+              messageData.isWhisper || messageData.whisper
+                ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-400/50 text-purple-100 rounded-tl-xs shadow-purple-950/40"
+                : messageData.isAction
+                ? "bg-amber-950/40 border border-amber-500/30 text-amber-200 italic rounded-tl-xs"
+                : isMe
+                ? "bg-gradient-to-br from-indigo-600/95 via-indigo-500/95 to-violet-600/95 text-white rounded-tr-xs shadow-indigo-500/25 border border-indigo-400/30 backdrop-blur-md"
+                : isBot
+                ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-500/40 text-purple-100 rounded-tl-xs shadow-purple-900/40"
+                : "bg-slate-900/85 border border-white/12 text-slate-100 rounded-tl-xs shadow-black/30 backdrop-blur-xl"
+            } ${isOtr ? "border-dashed border-amber-400/50 bg-amber-950/30" : ""}`}
+          >
+            {/* WhatsApp-Style Quoted Reply Box */}
+            {messageData.replyTo && (
+              <div className="border-l-4 border-indigo-300 bg-black/40 rounded-r-xl px-2.5 py-1.5 mb-2 text-xs backdrop-blur-xs select-none">
+                <div className="font-semibold text-indigo-300 text-[11px] mb-0.5">
+                  Replying to {messageData.replyTo.sender}
+                </div>
+                <div className="text-zinc-200/90 text-[12px] truncate line-clamp-1">
+                  {messageData.replyTo.message}
+                </div>
               </div>
-              <button
-                onClick={copyMessage}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-              >
-                <Copy className="w-4 h-4 text-indigo-400" /> Copy Text
-              </button>
-              <button
-                onClick={() => { if (onReply) onReply(messageData); setShowContextMenu(false); }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-              >
-                <Reply className="w-4 h-4 text-purple-400" /> Reply to Message
-              </button>
-              {isMe && onDelete && (
-                <button
-                  onClick={() => { onDelete(messageData); setShowContextMenu(false); }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4 text-rose-400" /> Delete Message
-                </button>
+            )}
+
+            {(messageData.isWhisper || messageData.whisper) && (
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-purple-300 border-b border-purple-500/30 pb-1 mb-1.5">
+                <span>🤫 Ephemeral Whisper</span>
+                <span className="text-[9px] bg-purple-900/60 px-1.5 py-0.5 rounded text-purple-200 font-mono">10s TTL</span>
+              </div>
+            )}
+
+            <div className="text-[13.5px] font-normal leading-relaxed text-slate-100">
+              {isAutoCode ? (
+                <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {rawMessageText}
+                </ReactMarkdown>
+              )}
+            </div>
+
+            {/* Bottom Right Timestamp & Status Indicator */}
+            <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-75 font-mono select-none tracking-wider">
+              <span>{formatTimestamp(messageData.timestamp)}</span>
+              {isMe && (
+                messageData.status === 'read' || messageData.isRead ? (
+                  <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline-block drop-shadow-[0_0_4px_rgba(34,211,238,0.6)]" title="Read" />
+                ) : messageData.status === 'delivered' || messageData.isDelivered ? (
+                  <CheckCheck className="w-3.5 h-3.5 text-white/80 inline-block" title="Delivered" />
+                ) : (
+                  <Check className="w-3.5 h-3.5 text-white/60 inline-block" title="Sent" />
+                )
               )}
             </div>
           </div>
-        )}
+
+          {/* Reaction Badge */}
+          {reaction && (
+            <span className="absolute -bottom-2 right-2 bg-slate-900 border border-slate-700 text-xs px-1.5 py-0.5 rounded-full shadow-lg animate-bounce select-none">
+              {reaction}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Double-Tap / Focus Spotlight Backdrop Overlay */}
+      {isFocusSpotlight && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in"
+          onClick={() => setIsFocusSpotlight(false)}
+        >
+          <div
+            className="w-full max-w-sm flex flex-col items-center gap-4 animate-scale-up"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Quick Emoji Reaction Pill Bar */}
+            <div className="bg-slate-900/90 border border-white/20 rounded-full px-4 py-2 shadow-2xl flex items-center gap-3 backdrop-blur-xl">
+              {['❤️', '👍', '🔥', '😂', '😮', '👏'].map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    setReaction(emoji);
+                    setIsFocusSpotlight(false);
+                    if (window.navigator.vibrate) window.navigator.vibrate(30);
+                  }}
+                  className="hover:scale-130 active:scale-95 transition-transform text-2xl cursor-pointer"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            {/* Elevated Focused Message Spotlight Card */}
+            <div
+              className={`w-full p-4 rounded-2xl text-[14px] leading-relaxed shadow-2xl border ${
+                isMe
+                  ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 text-white border-indigo-300/40 ring-4 ring-indigo-500/30"
+                  : "bg-slate-900/95 border-white/20 text-slate-100 ring-4 ring-slate-700/50"
+              }`}
+            >
+              {!isMe && (
+                <div className="text-xs font-semibold text-indigo-300 mb-1.5">
+                  {senderName}
+                </div>
+              )}
+              {messageData.replyTo && (
+                <div className="border-l-4 border-indigo-300 bg-black/40 rounded-r-xl px-2.5 py-1.5 mb-2 text-xs backdrop-blur-xs select-none">
+                  <div className="font-semibold text-indigo-300 text-[11px] mb-0.5">
+                    Replying to {messageData.replyTo.sender}
+                  </div>
+                  <div className="text-zinc-200/90 text-[12px] truncate">
+                    {messageData.replyTo.message}
+                  </div>
+                </div>
+              )}
+              <div className="text-[14px] leading-relaxed select-text">
+                {isAutoCode ? (
+                  <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+                ) : (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {rawMessageText}
+                  </ReactMarkdown>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-1 mt-2 text-[11px] opacity-75 font-mono">
+                <span>{formatTimestamp(messageData.timestamp)}</span>
+              </div>
+            </div>
+
+            {/* Contextual Action Menu Options */}
+            <div className="w-full bg-slate-900/90 border border-white/15 rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1">
+              <button
+                onClick={copyMessage}
+                className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Copy className="w-4 h-4 text-indigo-400" /> Copy Text
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  if (onReply) onReply(messageData);
+                  setIsFocusSpotlight(false);
+                }}
+                className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Reply className="w-4 h-4 text-purple-400" /> Reply to Message
+                </span>
+              </button>
+              {isMe && onDelete && (
+                <button
+                  onClick={() => {
+                    onDelete(messageData);
+                    setIsFocusSpotlight(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-rose-400 hover:bg-rose-950/40 flex items-center justify-between cursor-pointer font-medium"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Trash2 className="w-4 h-4 text-rose-400" /> Delete Message
+                  </span>
+                </button>
+              )}
+            </div>
+            
+            <div className="text-[11px] text-zinc-400 font-sans tracking-wide">
+              Tap anywhere outside to close
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

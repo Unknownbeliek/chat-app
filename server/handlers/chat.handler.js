@@ -5,7 +5,7 @@ import { broadcast, sendPushToOfflineUser } from '../services/broadcast.service.
 import { handlePingBotQuery } from '../services/pingbot.service.js';
 
 export async function handleChat(ws, data, currentUsername) {
-  const { type, recipient, message: text, isOffTheRecord, enabled, whisper } = data;
+  const { type, recipient, message: text, isOffTheRecord, enabled, whisper, replyTo } = data;
 
   // 0. Whisper Ephemeral Private Message (never saved to DB)
   if (type === 'whisper' || whisper === true) {
@@ -22,6 +22,7 @@ export async function handleChat(ws, data, currentUsername) {
       recipient: recipient,
       message: text,
       whisper: true,
+      replyTo: replyTo || null,
       ttl: data.ttl || 10,
       timestamp: isoNow
     });
@@ -63,6 +64,7 @@ export async function handleChat(ws, data, currentUsername) {
       message: text,
       status: initialStatus,
       isOffTheRecord: !!isOffTheRecord,
+      replyTo: replyTo || null,
       timestamp: isoNow
     };
     const payloadStr = JSON.stringify(payloadObj);
@@ -78,6 +80,7 @@ export async function handleChat(ws, data, currentUsername) {
           type: 'private_chat',
           status: initialStatus,
           isOffTheRecord: false,
+          replyTo: replyTo || null,
           timestamp: new Date()
         });
         await newDbMsg.save();
@@ -162,6 +165,7 @@ export async function handleChat(ws, data, currentUsername) {
         username: senderName,
         message: text,
         type: 'global_chat',
+        replyTo: replyTo || null,
         timestamp: new Date()
       });
       await newDbMessage.save();
@@ -173,6 +177,7 @@ export async function handleChat(ws, data, currentUsername) {
       type: 'global_chat',
       sender: senderName,
       message: text,
+      replyTo: replyTo || null,
       timestamp: isoNow
     });
 

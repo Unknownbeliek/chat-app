@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Terminal, CheckCircle } from 'lucide-react';
+import { Paperclip, Terminal, CheckCircle, Reply, X } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import SlashCommandPalette, { COMMANDS } from './SlashCommandPalette';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
@@ -15,7 +15,9 @@ export default function MessageInput({
   currentUsername,
   onClearLocalChat,
   sendMessage,
-  registeredUsers = []
+  registeredUsers = [],
+  replyTo = null,
+  setReplyTo = () => {}
 }) {
   const { wpm, registerKeystroke } = useWpmCalculator();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -23,6 +25,13 @@ export default function MessageInput({
   const [toastMessage, setToastMessage] = useState(null);
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
+
+  // Focus input field when replyTo is selected
+  useEffect(() => {
+    if (replyTo && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [replyTo]);
 
   const showSlashPalette = inputMessage.startsWith('/') && !disabled;
   const filterQuery = showSlashPalette ? inputMessage : '';
@@ -184,7 +193,7 @@ export default function MessageInput({
       executeSlashCommand(inputMessage);
       setShowEmojiPicker(false);
     } else {
-      onSendMessage();
+      onSendMessage(replyTo ? { replyTo: { id: replyTo._id, sender: replyTo.sender, message: replyTo.message } } : null);
       setShowEmojiPicker(false);
     }
   };
@@ -252,8 +261,34 @@ export default function MessageInput({
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-3 glass-header border-t border-white/10 flex items-center gap-2 sticky bottom-0 z-20 relative"
+      className="p-3 glass-header border-t border-white/10 flex flex-col gap-2 sticky bottom-0 z-20 relative"
     >
+      {/* WhatsApp-Style Replying-To Preview Banner */}
+      {replyTo && (
+        <div className="w-full bg-slate-900/95 border border-indigo-500/40 rounded-xl px-3 py-2 flex items-center justify-between text-xs backdrop-blur-xl shadow-xl animate-in fade-in slide-in-from-bottom-2 select-none">
+          <div className="flex items-center gap-2.5 overflow-hidden border-l-4 border-indigo-400 pl-2">
+            <Reply className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <div className="truncate">
+              <div className="font-semibold text-indigo-300 text-[11px]">
+                Replying to <span className="text-white">{replyTo.sender}</span>
+              </div>
+              <div className="text-zinc-300 text-[12px] truncate line-clamp-1">
+                {replyTo.message}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyTo(null)}
+            className="p-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+            title="Cancel Reply"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 w-full">
       {/* Verified Whisper Recipient Blue Badge */}
       {matchedRecipient && (
         <div className="absolute -top-9 left-3 z-40 px-3 py-1 rounded-xl bg-blue-950/90 border border-blue-500/50 text-xs font-semibold text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.35)] backdrop-blur-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1">
@@ -363,6 +398,7 @@ export default function MessageInput({
       >
         <SendIcon className="w-5 h-5 pointer-events-none" />
       </button>
+      </div>
     </form>
   );
 }

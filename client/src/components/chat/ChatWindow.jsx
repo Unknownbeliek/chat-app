@@ -34,6 +34,7 @@ export default function ChatWindow({
   const prevScrollHeightRef = useRef(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [replyTo, setReplyTo] = useState(null);
   const isAtBottomRef = useRef(true);
   const prevMessagesLengthRef = useRef(chatMessages.length);
 
@@ -61,6 +62,7 @@ export default function ChatWindow({
     setIsAtBottom(true);
     isAtBottomRef.current = true;
     setUnreadCount(0);
+    setReplyTo(null);
     prevMessagesLengthRef.current = chatMessages.length;
     const timer = setTimeout(() => scrollToBottom(true), 50);
     return () => clearTimeout(timer);
@@ -194,6 +196,7 @@ export default function ChatWindow({
                 currentUsername={currentUsername}
                 registeredUsers={registeredUsers}
                 isGrouped={isGrouped}
+                onReply={(m) => setReplyTo(m)}
               />
             );
           })
@@ -231,7 +234,10 @@ export default function ChatWindow({
       <MessageInput
         inputMessage={inputMessage}
         setInputMessage={setInputMessage}
-        onSendMessage={onSendMessage}
+        onSendMessage={(replyData) => {
+          onSendMessage(replyData);
+          setReplyTo(null);
+        }}
         onTyping={onTyping}
         wpm={wpm}
         disabled={isConnecting}
@@ -240,6 +246,8 @@ export default function ChatWindow({
         onClearLocalChat={onClearLocalChat}
         sendMessage={sendMessage}
         registeredUsers={registeredUsers}
+        replyTo={replyTo}
+        setReplyTo={setReplyTo}
       />
     </main>
   );

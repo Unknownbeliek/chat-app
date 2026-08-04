@@ -522,19 +522,21 @@ export default function Chat() {
   };
 
   // Send Message Handler
-  const handleSendMessage = () => {
+  const handleSendMessage = (extraPayload) => {
     if (!inputMessage.trim()) return;
 
+    const basePayload = {
+      sender: username,
+      message: inputMessage.trim(),
+      ...(extraPayload || {})
+    };
+
     if (selectedUser === "Global Chat") {
-      sendMessage('global_chat', {
-        sender: username,
-        message: inputMessage.trim()
-      });
+      sendMessage('global_chat', basePayload);
     } else {
       sendMessage('private_chat', {
-        sender: username,
+        ...basePayload,
         recipient: selectedUser,
-        message: inputMessage.trim(),
         isOffTheRecord: isOffTheRecord
       });
     }
