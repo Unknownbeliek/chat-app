@@ -1,6 +1,7 @@
 import express from 'express';
 import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
+import { User } from '../models/User.js';
 
 const router = express.Router();
 
@@ -38,6 +39,115 @@ router.get('/messages/private', async (req, res) => {
   } catch (err) {
     console.error('Fetch private history error:', err);
     res.status(500).json({ error: 'Server error fetching private history.' });
+  }
+});
+
+// REST Endpoint: Get All Historical Chats for a user (queries Message & Conversation DB)
+router.get('/chats/history', async (req, res) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ error: 'username query parameter is required.' });
+    }
+    const lowerUser = username.trim().toLowerCase();
+
+    // 1. Find all distinct private messages involving user
+    const messages = await Message.find({
+      type: 'private_chat',
+      $or: [
+        { username: new RegExp(`^${lowerUser}$`, 'i') },
+        { recipient: new RegExp(`^${lowerUser}$`, 'i') }
+      ]
+    })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    const peerMap = new Map();
+
+    messages.forEach(msg => {
+      const sender = (msg.username || '').toLowerCase();
+      const recipient = (msg.recipient || '').toLowerCase();
+      const peer = sender === lowerUser ? recipient : sender;
+
+      if (peer && peer !== lowerUser && !peerMap.has(peer)) {
+        peerMap.set(peer, {
+          partner: peer,
+          lastMessage: msg.message || '',
+          lastMessageSender: msg.username,
+          lastMessageAt: msg.timestamp,
+          unreadCount: 0
+        });
+      }
+    });
+
+    // 2. Combine with Conversation records for unread count and latest timestamps
+    const conversations = await Conversation.find({
+      participants: lowerUser
+    }).lean();
+
+    conversations.forEach(c => {
+      const partner = c.participants.find(p => p !== lowerUser);
+      if (partner) {
+        const unread = c.unreadCount instanceof Map
+          ? (c.unreadCount.get(lowerUser) || 0)
+          : (c.unreadCount?.[lowerUser] || 0);
+
+        if (peerMap.has(partner)) {
+          const existing = peerMap.get(partner);
+          existing.unreadCount = unread;
+          if (new Date(c.lastMessageAt) > new Date(existing.lastMessageAt)) {
+            existing.lastMessage = c.lastMessage;
+            existing.lastMessageSender = c.lastMessageSender;
+            existing.lastMessageAt = c.lastMessageAt;
+          }
+        } else {
+          peerMap.set(partner, {
+            partner,
+            lastMessage: c.lastMessage,
+            lastMessageSender: c.lastMessageSender,
+            lastMessageAt: c.lastMessageAt,
+            unreadCount: unread
+          });
+        }
+      }
+    });
+
+    // 3. Fetch User profiles for all peers
+    const peerNames = Array.from(peerMap.keys());
+    const userProfiles = await User.find({
+      username: { $in: peerNames.map(p => new RegExp(`^${p}$`, 'i')) }
+    }, 'username bio status avatarColor avatarUrl isOnline lastSeen').lean();
+
+    const profileMap = new Map();
+    userProfiles.forEach(u => {
+      profileMap.set(u.username.toLowerCase(), u);
+    });
+
+    // 4. Assemble output list sorted by lastMessageAt descending
+    const chatHistory = Array.from(peerMap.values()).map(item => {
+      const profile = profileMap.get(item.partner.toLowerCase()) || {};
+      return {
+        partner: profile.username || item.partner,
+        username: profile.username || item.partner,
+        bio: profile.bio || '',
+        status: profile.status || '',
+        avatarColor: profile.avatarColor || '#6366f1',
+        avatarUrl: profile.avatarUrl || '',
+        isOnline: !!profile.isOnline,
+        lastSeen: profile.lastSeen,
+        lastMessage: item.lastMessage,
+        lastMessageSender: item.lastMessageSender,
+        lastMessageAt: item.lastMessageAt,
+        unreadCount: item.unreadCount || 0
+      };
+    });
+
+    chatHistory.sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+
+    res.json({ success: true, chats: chatHistory });
+  } catch (err) {
+    console.error('Fetch chats history error:', err);
+    res.status(500).json({ error: 'Server error fetching chat history.' });
   }
 });
 

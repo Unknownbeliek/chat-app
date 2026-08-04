@@ -24,7 +24,9 @@ export default function ChatWindow({
   onLoadOlderHistory,
   onStartCall,
   callState,
-  registeredUsers = []
+  registeredUsers = [],
+  onClearLocalChat,
+  sendMessage
 }) {
   const chatContainerRef = useRef(null);
   const messageEndRef = useRef(null);
@@ -233,6 +235,11 @@ export default function ChatWindow({
         onTyping={onTyping}
         wpm={wpm}
         disabled={isConnecting}
+        selectedUser={selectedUser}
+        currentUsername={currentUsername}
+        onClearLocalChat={onClearLocalChat}
+        sendMessage={sendMessage}
+        registeredUsers={registeredUsers}
       />
     </main>
   );

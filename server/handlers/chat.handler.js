@@ -1,11 +1,49 @@
 import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
 import { activeUsers } from '../services/activeUsers.service.js';
-import { broadcast } from '../services/broadcast.service.js';
+import { broadcast, sendPushToOfflineUser } from '../services/broadcast.service.js';
 import { handlePingBotQuery } from '../services/pingbot.service.js';
 
 export async function handleChat(ws, data, currentUsername) {
-  const { type, recipient, message: text, isOffTheRecord, enabled } = data;
+  const { type, recipient, message: text, isOffTheRecord, enabled, whisper } = data;
+
+  // 0. Whisper Ephemeral Private Message (never saved to DB)
+  if (type === 'whisper' || whisper === true) {
+    if (!recipient || !text) return;
+
+    const senderName = currentUsername || data.sender || 'Anonymous';
+    const targetKey = recipient.toLowerCase();
+    const recipientUser = activeUsers.get(targetKey);
+    const isoNow = new Date().toISOString();
+
+    const whisperPayload = JSON.stringify({
+      type: 'whisper',
+      sender: senderName,
+      recipient: recipient,
+      message: text,
+      whisper: true,
+      ttl: data.ttl || 10,
+      timestamp: isoNow
+    });
+
+    // Send only to recipient active socket
+    if (recipientUser && recipientUser.ws.readyState === 1) {
+      recipientUser.ws.send(whisperPayload);
+    } else {
+      // Offline recipient -> send Web Push Notification
+      sendPushToOfflineUser(recipient, {
+        title: `Secret Whisper from ${senderName}`,
+        body: '🤫 You received a private whisper',
+        data: { url: '/' }
+      });
+    }
+
+    // Echo back to sender so sender sees their own sent whisper
+    if (ws && ws.readyState === 1 && targetKey !== (currentUsername ? currentUsername.toLowerCase() : '')) {
+      ws.send(whisperPayload);
+    }
+    return;
+  }
 
   // 1. Private 1-to-1 Chat
   if (type === 'private_chat') {
@@ -81,6 +119,13 @@ export async function handleChat(ws, data, currentUsername) {
         partner: senderName,
         unreadCount: updatedUnread
       }));
+    } else {
+      // Recipient is offline -> deliver Push Notification
+      sendPushToOfflineUser(recipient, {
+        title: `New message from ${senderName}`,
+        body: text.length > 100 ? text.substring(0, 97) + '...' : text,
+        data: { url: '/' }
+      });
     }
 
     if (ws.readyState === 1 && targetKey !== (currentUsername ? currentUsername.toLowerCase() : '')) {

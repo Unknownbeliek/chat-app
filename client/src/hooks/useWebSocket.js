@@ -135,6 +135,51 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
             break;
           }
 
+          case 'whisper': {
+            const isMe = data.sender && data.sender.toLowerCase() === username.toLowerCase();
+            const rawPartner = isMe ? data.recipient : data.sender;
+            if (!rawPartner) break;
+
+            const whisperId = `whisper_${Date.now()}_${Math.random()}`;
+            const whisperMsg = {
+              ...data,
+              id: whisperId,
+              isWhisper: true,
+              timestamp: data.timestamp || new Date().toISOString()
+            };
+
+            setChatHistory(prev => {
+              const partnerKey = Object.keys(prev).find(
+                k => k.toLowerCase() === rawPartner.toLowerCase()
+              ) || rawPartner;
+              const existing = prev[partnerKey] || [];
+              return {
+                ...prev,
+                [partnerKey]: [...existing, whisperMsg]
+              };
+            });
+
+            // Auto-expire and remove whisper message after TTL (default 10s)
+            const ttlMs = (data.ttl || 10) * 1000;
+            setTimeout(() => {
+              setChatHistory(prev => {
+                const partnerKey = Object.keys(prev).find(
+                  k => k.toLowerCase() === rawPartner.toLowerCase()
+                ) || rawPartner;
+                const existing = prev[partnerKey] || [];
+                return {
+                  ...prev,
+                  [partnerKey]: existing.filter(m => m.id !== whisperId && m.timestamp !== whisperMsg.timestamp)
+                };
+              });
+            }, ttlMs);
+
+            if (!isMe) {
+              onNotification?.(`🤫 Whisper from ${data.sender}`, data.message);
+            }
+            break;
+          }
+
           case 'unread_update':
             if (data.partner && typeof data.unreadCount === 'number') {
               // If the partner is currently open in active chat, keep unread at 0

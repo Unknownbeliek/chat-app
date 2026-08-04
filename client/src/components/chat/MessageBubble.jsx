@@ -1,95 +1,164 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Reply, Copy, Check, Trash2, CheckCheck, Code } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import { formatTimestamp } from '../../utils/dateUtils';
 
-// Helper function for formatting code blocks and markdown elements
-function renderFormattedMessage(text) {
-  if (!text) return null;
+// Helper to copy text to clipboard with feedback
+function CodeBlockContainer({ language, codeString }) {
+  const [copied, setCopied] = useState(false);
 
-  // Split by code blocks ```code```
-  const codeBlockRegex = /```(?:(\w+)\n)?([\s\S]*?)```/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  while ((match = codeBlockRegex.exec(text)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      parts.push({
-        type: 'text',
-        content: text.slice(lastIndex, match.index)
-      });
-    }
-
-    const language = match[1] || 'code';
-    const codeContent = match[2];
-    parts.push({
-      type: 'code',
-      language,
-      content: codeContent
-    });
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push({
-      type: 'text',
-      content: text.slice(lastIndex)
-    });
-  }
-
-  return parts.map((part, index) => {
-    if (part.type === 'code') {
-      return (
-        <div key={index} className="my-2 rounded-xl bg-zinc-950/80 border border-indigo-500/30 overflow-hidden shadow-xl text-left font-mono">
-          <div className="bg-white/5 px-3 py-1 text-[10px] text-indigo-300 font-semibold uppercase tracking-wider border-b border-white/5 flex items-center justify-between">
-            <span>{part.language}</span>
-            <span className="text-zinc-500 text-[9px]">code snippet</span>
-          </div>
-          <pre className="p-3 text-xs text-emerald-300 overflow-x-auto whitespace-pre font-mono leading-relaxed">
-            <code>{part.content.trim()}</code>
-          </pre>
+  return (
+    <div className="my-2 rounded-xl bg-slate-950/95 border border-indigo-500/30 overflow-hidden shadow-2xl text-left font-mono max-w-full group/code">
+      <div className="bg-white/5 px-3 py-1.5 text-[10px] text-indigo-300 font-semibold uppercase tracking-wider border-b border-white/10 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Code className="w-3 h-3 text-indigo-400" />
+          <span>{language || 'code'}</span>
         </div>
-      );
-    }
+        <button
+          onClick={handleCopy}
+          className="text-zinc-400 hover:text-white flex items-center gap-1 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-colors text-[10px] cursor-pointer"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3 h-3 text-emerald-400" />
+              <span className="text-emerald-400 font-sans">Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3 h-3" />
+              <span className="font-sans">Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      <div className="overflow-x-auto p-3 text-xs leading-relaxed">
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={language || 'javascript'}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            padding: 0,
+            background: 'transparent',
+            fontSize: '0.82rem',
+            lineHeight: '1.45'
+          }}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      </div>
+    </div>
+  );
+}
 
-    // Process inline markdown (**bold**, `inline code`)
-    const inlineContent = part.content;
+// Custom Markdown components for clean glassmorphic dark theme
+const markdownComponents = {
+  code({ node, inline, className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || '');
+    const codeString = String(children).replace(/\n$/, '');
+
+    if (!inline) {
+      const language = match ? match[1] : 'javascript';
+      return <CodeBlockContainer language={language} codeString={codeString} />;
+    }
     return (
-      <span key={index} className="whitespace-pre-wrap">
-        {inlineContent.split('\n').map((line, lineIdx) => (
-          <React.Fragment key={lineIdx}>
-            {lineIdx > 0 && <br />}
-            {renderInlineMarkdown(line)}
-          </React.Fragment>
-        ))}
-      </span>
+      <code className="px-1.5 py-0.5 mx-0.5 rounded bg-slate-950/80 text-indigo-300 font-mono text-[12px] border border-indigo-500/25 select-all" {...props}>
+        {children}
+      </code>
     );
-  });
+  },
+  p({ children }) {
+    return <p className="mb-1 last:mb-0 inline-block w-full text-sm leading-relaxed">{children}</p>;
+  },
+  table({ children }) {
+    return (
+      <div className="my-2 overflow-x-auto rounded-lg border border-white/10 max-w-full">
+        <table className="min-w-full divide-y divide-white/10 text-xs text-left">
+          {children}
+        </table>
+      </div>
+    );
+  },
+  thead({ children }) {
+    return <thead className="bg-white/5 text-zinc-200 font-semibold">{children}</thead>;
+  },
+  th({ children }) {
+    return <th className="px-3 py-1.5 border-b border-white/10">{children}</th>;
+  },
+  td({ children }) {
+    return <td className="px-3 py-1.5 border-b border-white/5 text-zinc-300">{children}</td>;
+  },
+  blockquote({ children }) {
+    return (
+      <blockquote className="my-2 pl-3 border-l-2 border-indigo-400 italic text-zinc-300 bg-white/5 py-1 pr-2 rounded-r">
+        {children}
+      </blockquote>
+    );
+  },
+  a({ href, children }) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-300 hover:text-indigo-200 underline font-medium">
+        {children}
+      </a>
+    );
+  },
+  ul({ children }) {
+    return <ul className="list-disc list-inside my-1 space-y-0.5 text-sm">{children}</ul>;
+  },
+  ol({ children }) {
+    return <ol className="list-decimal list-inside my-1 space-y-0.5 text-sm">{children}</ol>;
+  },
+  h1({ children }) {
+    return <h1 className="text-base font-bold text-white my-1 border-b border-white/10 pb-0.5">{children}</h1>;
+  },
+  h2({ children }) {
+    return <h2 className="text-sm font-bold text-white my-1">{children}</h2>;
+  },
+  h3({ children }) {
+    return <h3 className="text-xs font-bold text-indigo-200 my-1">{children}</h3>;
+  }
+};
+
+// Check if raw text looks like code (e.g. multiline code without backticks)
+function isLikelyRawCode(text) {
+  if (!text || typeof text !== 'string') return false;
+  if (text.startsWith('```')) return false; // Already markdown fenced
+
+  const lines = text.split('\n');
+  if (lines.length < 2) return false;
+
+  const codeKeywords = /^\s*(import |export |const |let |var |function |class |if |for |while |switch |return |def |public |private |protected |struct |package |select |insert |update |delete |<[a-z0-9]+)/i;
+  const codeSyntax = /[{};=>()]/;
+
+  let matchingLines = 0;
+  for (const line of lines) {
+    if (codeKeywords.test(line) || (codeSyntax.test(line) && line.includes(';'))) {
+      matchingLines++;
+    }
+  }
+
+  return matchingLines >= 2;
 }
 
-function renderInlineMarkdown(line) {
-  // Replace `code` and **bold**
-  const regex = /(`[^`]+`|\*\*[^*]+\*\*)/g;
-  const tokens = line.split(regex);
-
-  return tokens.map((token, i) => {
-    if (token.startsWith('`') && token.endsWith('`')) {
-      return (
-        <code key={i} className="px-1.5 py-0.5 mx-0.5 rounded bg-indigo-950/60 text-indigo-300 font-mono text-[12px] border border-indigo-500/20">
-          {token.slice(1, -1)}
-        </code>
-      );
-    }
-    if (token.startsWith('**') && token.endsWith('**')) {
-      return <strong key={i} className="font-bold text-white">{token.slice(2, -2)}</strong>;
-    }
-    return token;
-  });
-}
-
-export default function MessageBubble({ messageData, currentUsername, registeredUsers = [], isGrouped = false }) {
+export default function MessageBubble({
+  messageData,
+  currentUsername,
+  registeredUsers = [],
+  isGrouped = false,
+  onReply,
+  onDelete
+}) {
   const isMe = messageData.sender && messageData.sender.toLowerCase() === currentUsername.toLowerCase();
   const senderName = messageData.sender || "System";
   const isOtr = messageData.isOffTheRecord || false;
@@ -99,27 +168,100 @@ export default function MessageBubble({ messageData, currentUsername, registered
     u => u && u.username && u.username.toLowerCase() === senderName.toLowerCase()
   );
 
+  // Touch Gesture & Context Menu States
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [reaction, setReaction] = useState(messageData.reaction || null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const touchStartPos = useRef({ x: 0, y: 0 });
+  const touchTimer = useRef(null);
+  const lastTapTime = useRef(0);
+
+  const rawMessageText = messageData.message || '';
+  const isAutoCode = isLikelyRawCode(rawMessageText);
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+
+    touchTimer.current = setTimeout(() => {
+      setShowContextMenu(true);
+      if (window.navigator.vibrate) window.navigator.vibrate(50);
+    }, 500);
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartPos.current.x;
+    const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
+
+    if (deltaY > 10 || Math.abs(deltaX) > 10) {
+      if (touchTimer.current) clearTimeout(touchTimer.current);
+    }
+
+    if (deltaX > 0 && deltaX < 80 && deltaY < 20) {
+      setSwipeOffset(deltaX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimer.current) clearTimeout(touchTimer.current);
+
+    if (swipeOffset > 60) {
+      if (onReply) onReply(messageData);
+      if (window.navigator.vibrate) window.navigator.vibrate(30);
+    }
+    setSwipeOffset(0);
+
+    const now = Date.now();
+    if (now - lastTapTime.current < 300) {
+      setReaction(prev => prev === "❤️" ? null : "❤️");
+      if (window.navigator.vibrate) window.navigator.vibrate([30, 30]);
+    }
+    lastTapTime.current = now;
+  };
+
+  const copyMessage = () => {
+    navigator.clipboard.writeText(rawMessageText);
+    setShowContextMenu(false);
+  };
+
   return (
-    <div className={`flex items-end gap-2 text-left msg-enter ${isGrouped ? "mt-1 mb-0.5" : "mt-3 mb-1"} ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-      {/* Sender Avatar - shown only for initial message in group */}
-      {!isGrouped ? (
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{ transform: `translateX(${swipeOffset}px)` }}
+      className={`flex items-end gap-2 text-left msg-enter transition-transform duration-100 relative group ${
+        isGrouped ? "mt-1 mb-0.5" : "mt-3 mb-1"
+      } ${isMe ? "flex-row-reverse" : "flex-row"}`}
+    >
+      {/* Swipe Reply Visual Indicator */}
+      {swipeOffset > 20 && (
+        <div className="absolute left-[-30px] top-1/2 -translate-y-1/2 text-indigo-400 opacity-80 flex items-center gap-1 text-xs">
+          <Reply className="w-4 h-4" />
+        </div>
+      )}
+
+      {/* Sender Avatar */}
+      {!isGrouped && !isMe ? (
         <Avatar
           name={isBot ? "PingBot" : senderName}
           customColor={isBot ? "#8b5cf6" : senderUser?.avatarColor}
           avatarUrl={isBot ? undefined : senderUser?.avatarUrl}
           size="sm"
         />
-      ) : (
-        <div className="w-8 flex-shrink-0" />
-      )}
+      ) : !isMe ? (
+        <div className="w-7 flex-shrink-0" />
+      ) : null}
 
       {/* Message Bubble Container */}
-      <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-        {/* Sender Name Label - shown only for non-grouped messages */}
-        {!isGrouped && (
+      <div className={`max-w-[85%] sm:max-w-[70%] flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
+        {/* Sender Name Label */}
+        {!isGrouped && !isMe && (
           <div className="flex items-center gap-1.5 mb-1 px-1">
             <span className="text-[11px] font-semibold text-zinc-300">
-              {isMe ? "You" : (isBot ? "🤖 PingBot" : senderName)}
+              {isBot ? "🤖 PingBot" : senderName}
             </span>
             {isOtr && (
               <span className="text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md font-mono">
@@ -131,23 +273,95 @@ export default function MessageBubble({ messageData, currentUsername, registered
 
         {/* Message Content Bubble */}
         <div
-          className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words shadow-md transition-all relative overflow-hidden ${
-            isMe
-              ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-tr-xs shadow-indigo-500/20"
+          className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words shadow-lg transition-all relative overflow-hidden select-text ${
+            messageData.isWhisper || messageData.whisper
+              ? "bg-purple-950/90 border border-purple-400/60 text-purple-100 rounded-tl-xs shadow-purple-900/40"
+              : messageData.isAction
+              ? "bg-amber-950/40 border border-amber-500/30 text-amber-200 italic rounded-tl-xs"
+              : isMe
+              ? "bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 text-white rounded-tr-xs shadow-indigo-500/20 border border-indigo-400/30"
               : isBot
               ? "bg-purple-950/80 border border-purple-500/40 text-purple-100 rounded-tl-xs shadow-purple-900/40"
-              : "bg-slate-800/80 border border-slate-700/50 text-slate-100 rounded-tl-xs shadow-md backdrop-blur-md"
+              : "bg-slate-800/90 border border-slate-700/60 text-slate-100 rounded-tl-xs shadow-md backdrop-blur-md"
           } ${isOtr ? "border-dashed border-amber-400/50 bg-amber-950/30" : ""}`}
         >
-          <div className="inline">
-            {renderFormattedMessage(messageData.message)}
+          {(messageData.isWhisper || messageData.whisper) && (
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-purple-300 border-b border-purple-500/30 pb-1 mb-1.5">
+              <span>🤫 Ephemeral Whisper</span>
+              <span className="text-[9px] bg-purple-900/60 px-1.5 py-0.5 rounded text-purple-200 font-mono">10s TTL</span>
+            </div>
+          )}
+
+          <div className="prose prose-invert max-w-none text-sm font-sans leading-relaxed">
+            {isAutoCode ? (
+              <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+            ) : (
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                {rawMessageText}
+              </ReactMarkdown>
+            )}
           </div>
 
-          {/* Inline Bottom-Right Timestamp */}
-          <span className={`float-right inline-block text-[10px] opacity-60 font-mono select-none ml-3 mt-1.5 ${isMe ? "text-indigo-100" : "text-slate-400"}`}>
-            {formatTimestamp(messageData.timestamp)}
-          </span>
+          {/* Bottom Right Timestamp & Status Indicator */}
+          <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-80 font-mono select-none">
+            <span>{formatTimestamp(messageData.timestamp)}</span>
+            {isMe && (
+              messageData.status === 'read' || messageData.isRead ? (
+                <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline-block drop-shadow-[0_0_4px_rgba(34,211,238,0.5)]" title="Read" />
+              ) : messageData.status === 'delivered' || messageData.isDelivered ? (
+                <CheckCheck className="w-3.5 h-3.5 text-white/80 inline-block" title="Delivered" />
+              ) : (
+                <Check className="w-3.5 h-3.5 text-white/60 inline-block" title="Sent" />
+              )
+            )}
+          </div>
         </div>
+
+        {/* Reaction Badge */}
+        {reaction && (
+          <span className="absolute -bottom-2 right-2 bg-slate-900 border border-slate-700 text-xs px-1.5 py-0.5 rounded-full shadow-lg animate-bounce">
+            {reaction}
+          </span>
+        )}
+
+        {/* Contextual Action Menu Overlay / Modal */}
+        {showContextMenu && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in" onClick={() => setShowContextMenu(false)}>
+            <div className="bg-slate-900 border border-white/10 rounded-2xl p-2 w-64 shadow-2xl space-y-1" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-around p-2 border-b border-white/10 text-xl">
+                {['❤️', '👍', '🔥', '😂', '😮'].map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => { setReaction(emoji); setShowContextMenu(false); }}
+                    className="hover:scale-125 transition-transform p-1 cursor-pointer"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={copyMessage}
+                className="w-full text-left px-3 py-2 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+              >
+                <Copy className="w-4 h-4 text-indigo-400" /> Copy Text
+              </button>
+              <button
+                onClick={() => { if (onReply) onReply(messageData); setShowContextMenu(false); }}
+                className="w-full text-left px-3 py-2 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+              >
+                <Reply className="w-4 h-4 text-purple-400" /> Reply to Message
+              </button>
+              {isMe && onDelete && (
+                <button
+                  onClick={() => { onDelete(messageData); setShowContextMenu(false); }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-400" /> Delete Message
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

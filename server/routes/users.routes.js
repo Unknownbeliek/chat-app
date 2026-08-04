@@ -56,10 +56,11 @@ router.get('/profile/:username', async (req, res) => {
   }
 });
 
-// REST Endpoint: Update User Profile
-router.put('/profile', async (req, res) => {
+// REST Endpoint: Update User Profile (PUT /api/profile or PATCH /api/users/me)
+const handleUpdateProfile = async (req, res) => {
   try {
-    const { username, bio, status, location, avatarColor, avatarUrl } = req.body;
+    const username = req.body.username || req.headers['x-username'];
+    const { bio, status, location, avatarColor, avatarUrl } = req.body;
     if (!username) {
       return res.status(400).json({ error: 'Username is required.' });
     }
@@ -97,6 +98,9 @@ router.put('/profile', async (req, res) => {
     console.error('Update profile error:', err);
     res.status(500).json({ error: 'Server error updating profile.' });
   }
-});
+};
+
+router.put('/profile', handleUpdateProfile);
+router.patch('/users/me', handleUpdateProfile);
 
 export default router;

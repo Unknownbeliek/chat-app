@@ -12,6 +12,7 @@ import { initBroadcastService } from './services/broadcast.service.js';
 import authRouter from './routes/auth.routes.js';
 import usersRouter from './routes/users.routes.js';
 import messagesRouter from './routes/messages.routes.js';
+import pushRouter from './routes/push.routes.js';
 
 // WebSocket Handlers
 import { handleRegister, handleDisconnect } from './handlers/register.handler.js';
@@ -28,10 +29,12 @@ await connectDB();
 
 // Express Middleware & API Routes
 app.use(corsConfig);
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/api', authRouter);
 app.use('/api', usersRouter);
 app.use('/api', messagesRouter);
+app.use('/api/push', pushRouter);
 
 // HTTP & WebSocket Servers
 const server = http.createServer(app);

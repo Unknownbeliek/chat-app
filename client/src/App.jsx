@@ -8,8 +8,11 @@ import ConfirmModal from "./components/common/ConfirmModal";
 import NotificationPermissionModal from "./components/common/NotificationPermissionModal";
 import CallModal from "./components/calling/CallModal";
 import CallScreen from "./components/calling/CallScreen";
+import ShortcutsHelpModal from "./components/common/ShortcutsHelpModal";
+import useKeyboardShortcuts from "./components/hooks/useKeyboardShortcuts";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useWebRTC } from "./hooks/useWebRTC";
+import { subscribeUserToPush } from "./utils/push";
 
 export default function Chat() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -59,6 +62,8 @@ export default function Chat() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [historicalChats, setHistoricalChats] = useState([]);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // Notification Permission Onboarding State & Handlers
   const [showNotifModal, setShowNotifModal] = useState(false);
@@ -80,6 +85,9 @@ export default function Chat() {
         const res = await Notification.requestPermission();
         if (res === 'granted') {
           setNotificationsEnabled(true);
+          if (username) {
+            subscribeUserToPush(username);
+          }
         }
       } catch (err) {
         console.error('Notification permission error:', err);
@@ -355,6 +363,21 @@ export default function Chat() {
       // Ignore network errors gracefully
     }
   };
+  const fetchHistoricalChats = useCallback(async (uname) => {
+    const target = uname || username;
+    if (!target) return;
+    try {
+      const res = await fetch(`${getApiUrl()}/api/chats/history?username=${encodeURIComponent(target)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.chats)) {
+        setHistoricalChats(data.chats);
+      }
+    } catch (e) {
+      // Ignore network errors gracefully
+    }
+  }, [username, getApiUrl]);
+
   const fetchActiveChats = async () => {
     if (!username) return;
     try {
@@ -380,8 +403,9 @@ export default function Chat() {
       fetchUsers();
       fetchUserProfile(username);
       fetchActiveChats();
+      fetchHistoricalChats(username);
     }
-  }, [isLoggedIn, username]);
+  }, [isLoggedIn, username, fetchHistoricalChats]);
 
   // Fetch DM History on select contact
   const fetchPrivateHistory = async (targetUser) => {
@@ -456,36 +480,44 @@ export default function Chat() {
   };
 
   // Save Profile Handler
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
+  const handleSaveProfile = async (updatedProfile) => {
+    const profileToSave = updatedProfile || profile;
     setIsSavingProfile(true);
     setProfileSaveStatus("");
 
     try {
-      const res = await fetch(`${getApiUrl()}/api/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${getApiUrl()}/api/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Username": username
+        },
         body: JSON.stringify({
           username,
-          bio: profile.bio,
-          status: profile.status,
-          location: profile.location,
-          avatarColor: profile.avatarColor,
-          avatarUrl: profile.avatarUrl
+          bio: profileToSave.bio,
+          status: profileToSave.status,
+          location: profileToSave.location,
+          avatarColor: profileToSave.avatarColor,
+          avatarUrl: profileToSave.avatarUrl
         })
       });
       const data = await res.json();
       if (data.success) {
+        setProfile(profileToSave);
         setProfileSaveStatus("Profile saved successfully!");
-        localStorage.setItem("ping_user", JSON.stringify({ username, ...profile }));
+        localStorage.setItem("ping_user", JSON.stringify({ username, ...profileToSave }));
+        setIsSavingProfile(false);
+        setTimeout(() => setProfileSaveStatus(""), 4000);
+        return true;
       } else {
         setProfileSaveStatus("Error: " + (data.error || "Failed to update profile"));
+        setIsSavingProfile(false);
+        return false;
       }
     } catch (err) {
       setProfileSaveStatus("Error: Network connection failed.");
-    } finally {
       setIsSavingProfile(false);
-      setTimeout(() => setProfileSaveStatus(""), 4000);
+      return false;
     }
   };
 
@@ -535,6 +567,37 @@ export default function Chat() {
     }
   };
 
+  // Clear Local Chat Handler (/clear command)
+  const handleClearLocalChat = useCallback(() => {
+    if (!selectedUser) return;
+    setChatHistory(prev => {
+      const key = Object.keys(prev).find(k => k.toLowerCase() === selectedUser.toLowerCase()) || selectedUser;
+      return {
+        ...prev,
+        [key]: []
+      };
+    });
+  }, [selectedUser, setChatHistory]);
+
+  // Desktop Keyboard Shortcuts Handler Hook
+  useKeyboardShortcuts({
+    searchQuery,
+    setSearchQuery,
+    activeTab,
+    setActiveTab,
+    selectedUser,
+    setSelectedUser,
+    registeredUsers,
+    historicalChats,
+    chatHistory,
+    showShortcutsHelp,
+    setShowShortcutsHelp,
+    callState,
+    toggleMute: toggleAudio,
+    toggleVideo,
+    onSendMessage: handleSendMessage
+  });
+
   if (!isLoggedIn) {
     return (
       <AuthCard
@@ -579,6 +642,7 @@ export default function Chat() {
             selectedUser={selectedUser}
             onSelectContact={handleSelectContact}
             registeredUsers={registeredUsers}
+            historicalChats={historicalChats}
             onlineCount={onlineCount}
             chatHistory={chatHistory}
             searchQuery={searchQuery}
@@ -603,10 +667,11 @@ export default function Chat() {
             />
           ) : activeTab === "settings" ? (
             <SettingsView
+              username={username}
               soundEnabled={soundEnabled}
               setSoundEnabled={setSoundEnabled}
               notificationsEnabled={notificationsEnabled}
-              onToggleNotifications={handleToggleNotifications}
+              setNotificationsEnabled={setNotificationsEnabled}
               onOpenLogoutConfirm={() => setShowLogoutConfirm(true)}
               onBackToChats={() => setActiveTab("chats")}
             />
@@ -635,6 +700,8 @@ export default function Chat() {
               onLoadOlderHistory={handleLoadOlderHistory}
               onStartCall={handleStartCall}
               registeredUsers={registeredUsers}
+              onClearLocalChat={handleClearLocalChat}
+              sendMessage={sendMessage}
             />
           )}
         </div>
@@ -678,6 +745,12 @@ export default function Chat() {
         isOpen={showNotifModal}
         onEnable={handleEnableNotif}
         onSkip={handleSkipNotif}
+      />
+
+      {/* Keyboard & Touch Gesture Shortcuts Cheat Sheet Modal */}
+      <ShortcutsHelpModal
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
       />
     </div>
   );

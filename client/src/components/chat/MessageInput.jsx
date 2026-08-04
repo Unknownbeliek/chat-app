@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, Terminal, CheckCircle } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
+import SlashCommandPalette, { COMMANDS } from './SlashCommandPalette';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
 import { SendIcon } from '../animated-icons';
 
@@ -9,12 +10,58 @@ export default function MessageInput({
   setInputMessage,
   onSendMessage,
   onTyping,
-  disabled = false
+  disabled = false,
+  selectedUser,
+  currentUsername,
+  onClearLocalChat,
+  sendMessage,
+  registeredUsers = []
 }) {
   const { wpm, registerKeystroke } = useWpmCalculator();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [paletteIndex, setPaletteIndex] = useState(0);
+  const [toastMessage, setToastMessage] = useState(null);
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
+
+  const showSlashPalette = inputMessage.startsWith('/') && !disabled;
+  const filterQuery = showSlashPalette ? inputMessage : '';
+  const isWhisperMode = filterQuery.toLowerCase().startsWith('/whisper');
+
+  // Compute candidate whisper users including registered users, active chat user, and self
+  const combinedMap = new Map();
+  (registeredUsers || []).forEach(u => {
+    if (u && u.username) combinedMap.set(u.username.toLowerCase(), u);
+  });
+  if (selectedUser && selectedUser !== "Global Chat" && !combinedMap.has(selectedUser.toLowerCase())) {
+    combinedMap.set(selectedUser.toLowerCase(), { username: selectedUser, isOnline: true });
+  }
+  if (currentUsername && !combinedMap.has(currentUsername.toLowerCase())) {
+    combinedMap.set(currentUsername.toLowerCase(), { username: currentUsername, isOnline: true });
+  }
+  const allWhisperCandidates = Array.from(combinedMap.values());
+
+  const whisperTargetQuery = isWhisperMode
+    ? filterQuery.replace(/^\/whisper\s*/i, '').trim().toLowerCase().split(/\s+/)[0]
+    : '';
+
+  const whisperUsers = isWhisperMode
+    ? (whisperTargetQuery ? allWhisperCandidates.filter(u => u.username.toLowerCase().includes(whisperTargetQuery)) : allWhisperCandidates)
+    : [];
+
+  const filteredCommands = COMMANDS.filter(c =>
+    c.cmd.toLowerCase().includes(filterQuery.toLowerCase().replace(/^\//, '')) ||
+    c.description.toLowerCase().includes(filterQuery.toLowerCase().replace(/^\//, ''))
+  );
+
+  const currentList = isWhisperMode ? whisperUsers : filteredCommands;
+
+  // Check if typed recipient matches a valid candidate user
+  const whisperMatch = isWhisperMode ? inputMessage.match(/^\/whisper\s+([^\s]+)/i) : null;
+  const typedWhisperTarget = whisperMatch ? whisperMatch[1] : null;
+  const matchedRecipient = typedWhisperTarget
+    ? allWhisperCandidates.find(u => u.username.toLowerCase() === typedWhisperTarget.toLowerCase())
+    : null;
 
   // Close emoji picker popover when clicking outside
   useEffect(() => {
@@ -26,6 +73,16 @@ export default function MessageInput({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Reset palette selection index when query changes
+  useEffect(() => {
+    setPaletteIndex(0);
+  }, [inputMessage]);
+
+  const showToast = (text) => {
+    setToastMessage(text);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const handleChange = (e) => {
     const text = e.target.value;
@@ -46,21 +103,149 @@ export default function MessageInput({
     }
   };
 
+  const handleSelectCommand = (syntax) => {
+    setInputMessage(syntax);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const executeSlashCommand = (cmdText) => {
+    const trimmed = cmdText.trim();
+
+    // 1. /clear
+    if (trimmed.toLowerCase() === '/clear') {
+      onClearLocalChat?.();
+      showToast("Chat cleared locally");
+      setInputMessage("");
+      return true;
+    }
+
+    // 2. /whisper [username] [message]
+    if (trimmed.toLowerCase().startsWith('/whisper')) {
+      const match = trimmed.match(/^\/whisper\s+([^\s]+)\s+(.+)/i);
+      if (match) {
+        const targetUser = match[1];
+        const whisperText = match[2];
+        sendMessage?.('whisper', {
+          sender: currentUsername,
+          recipient: targetUser,
+          message: whisperText,
+          whisper: true,
+          ttl: 10
+        });
+        showToast(`🤫 Ephemeral whisper sent to ${targetUser} (10s TTL)`);
+        setInputMessage("");
+        return true;
+      } else {
+        showToast("Usage: /whisper [username] [message]");
+        return true;
+      }
+    }
+
+    // 3. /me [action]
+    if (trimmed.toLowerCase().startsWith('/me')) {
+      const match = trimmed.match(/^\/me\s+(.+)/i);
+      if (match) {
+        const actionText = match[1];
+        const formattedAction = `*${currentUsername} ${actionText}*`;
+
+        if (selectedUser === "Global Chat") {
+          sendMessage?.('global_chat', {
+            sender: currentUsername,
+            message: formattedAction,
+            isAction: true
+          });
+        } else {
+          sendMessage?.('private_chat', {
+            sender: currentUsername,
+            recipient: selectedUser,
+            message: formattedAction,
+            isAction: true
+          });
+        }
+        setInputMessage("");
+        return true;
+      } else {
+        showToast("Usage: /me [action]");
+        return true;
+      }
+    }
+
+    showToast("Unknown command. Type / for command palette.");
+    return false;
+  };
+
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (inputMessage.trim() && !disabled) {
+    if (e) e.preventDefault();
+    if (!inputMessage.trim() || disabled) return;
+
+    if (inputMessage.startsWith('/')) {
+      executeSlashCommand(inputMessage);
+      setShowEmojiPicker(false);
+    } else {
       onSendMessage();
       setShowEmojiPicker(false);
     }
   };
 
   const handleKeyDown = (e) => {
+    if (showSlashPalette && currentList.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setPaletteIndex(prev => (prev + 1) % currentList.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setPaletteIndex(prev => (prev - 1 + currentList.length) % currentList.length);
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const selected = currentList[paletteIndex];
+        if (selected) {
+          if (isWhisperMode) {
+            handleSelectCommand(`/whisper ${selected.username} `);
+          } else {
+            handleSelectCommand(selected.syntax);
+          }
+        }
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        if (isWhisperMode) {
+          const selectedUserItem = currentList[paletteIndex];
+          const hasMessageContent = inputMessage.match(/^\/whisper\s+[^\s]+\s+.+/i);
+
+          if (hasMessageContent) {
+            e.preventDefault();
+            handleSubmit();
+            return;
+          } else if (selectedUserItem) {
+            e.preventDefault();
+            handleSelectCommand(`/whisper ${selectedUserItem.username} `);
+            return;
+          }
+        }
+
+        // Standard command mode
+        const currentCmd = currentList[paletteIndex];
+        if (inputMessage.trim() === '/clear' || inputMessage.match(/^\/(whisper|me)\s+.+/i)) {
+          e.preventDefault();
+          handleSubmit();
+          return;
+        } else if (currentCmd) {
+          e.preventDefault();
+          handleSelectCommand(currentCmd.syntax);
+          return;
+        }
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (inputMessage.trim() && !disabled) {
-        onSendMessage();
-        setShowEmojiPicker(false);
-      }
+      handleSubmit();
     }
   };
 
@@ -69,6 +254,36 @@ export default function MessageInput({
       onSubmit={handleSubmit}
       className="p-3 glass-header border-t border-white/10 flex items-center gap-2 sticky bottom-0 z-20 relative"
     >
+      {/* Verified Whisper Recipient Blue Badge */}
+      {matchedRecipient && (
+        <div className="absolute -top-9 left-3 z-40 px-3 py-1 rounded-xl bg-blue-950/90 border border-blue-500/50 text-xs font-semibold text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.35)] backdrop-blur-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+          <CheckCircle className="w-3.5 h-3.5 text-blue-400" />
+          <span>Verified Recipient: <strong className="text-blue-100">{matchedRecipient.username}</strong></span>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900/90 border border-indigo-500/40 text-xs font-semibold text-indigo-300 shadow-2xl backdrop-blur-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle className="w-4 h-4 text-indigo-400 pointer-events-none" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Floating Slash Command Palette Popover */}
+      {showSlashPalette && (
+        <SlashCommandPalette
+          filterQuery={filterQuery}
+          selectedIndex={paletteIndex}
+          onSelectCommand={handleSelectCommand}
+          onClose={() => setInputMessage('')}
+          registeredUsers={registeredUsers}
+          currentUsername={currentUsername}
+          selectedUser={selectedUser}
+        />
+      )}
+
       {/* Native Glassmorphic Emoji Picker Floating Popover */}
       {showEmojiPicker && !disabled && (
         <div
@@ -84,8 +299,18 @@ export default function MessageInput({
 
       {/* Input Field Wrapper */}
       <div className="flex-1 relative flex items-center">
-        {/* Attachment & Emoji Trigger Buttons */}
+        {/* Attachment, Emoji & Slash Trigger Buttons */}
         <div className="absolute left-3 flex items-center gap-1.5 z-10">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => handleSelectCommand('/')}
+            className="p-1 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-white/10 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+            title="Slash Commands (/)"
+          >
+            <Terminal className="w-4 h-4 pointer-events-none" />
+          </button>
+
           <button
             type="button"
             disabled={disabled}
@@ -114,8 +339,12 @@ export default function MessageInput({
           value={inputMessage}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "Waking up server... Please wait." : "Type a message or @PingBot..."}
-          className="w-full bg-white/5 border border-white/10 pl-16 pr-16 py-3 rounded-2xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner backdrop-blur-md"
+          placeholder={disabled ? "Waking up server... Please wait." : "Type a message or / for commands..."}
+          className={`w-full bg-white/5 pl-24 pr-16 py-3 rounded-2xl text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner backdrop-blur-md font-sans ${
+            matchedRecipient
+              ? "border border-blue-500/80 text-blue-100 focus:ring-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
+              : "border border-white/10 text-zinc-100 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+          }`}
         />
 
         {wpm > 0 && !disabled && (

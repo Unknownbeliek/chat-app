@@ -1,7 +1,22 @@
+import webpush from 'web-push';
 import { User } from '../models/User.js';
+import { PushSubscription } from '../models/PushSubscription.js';
 
 let wssInstance = null;
 let activeUsersRef = null;
+
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  try {
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || 'mailto:admin@pingchatapp.com',
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+    console.log('Web Push VAPID initialized successfully');
+  } catch (err) {
+    console.error('Failed to set VAPID details:', err);
+  }
+}
 
 export function initBroadcastService(wss, activeUsersMap) {
   wssInstance = wss;
@@ -41,5 +56,43 @@ export async function broadcastUserList() {
     });
   } catch (err) {
     console.error('Error broadcasting user list:', err);
+  }
+}
+
+export async function sendPushToOfflineUser(recipientUsername, payloadData) {
+  try {
+    if (!recipientUsername) return;
+    const usernameClean = recipientUsername.toLowerCase().trim();
+
+    // Check if user has an active connected socket
+    const isOnline = activeUsersRef && activeUsersRef.has(usernameClean);
+    if (isOnline) {
+      return; // Skip push notification if user is online via socket
+    }
+
+    const subscriptions = await PushSubscription.find({ username: usernameClean });
+    if (!subscriptions || subscriptions.length === 0) return;
+
+    const payloadStr = JSON.stringify(payloadData);
+
+    for (const subRecord of subscriptions) {
+      const pushSubscription = {
+        endpoint: subRecord.endpoint,
+        keys: subRecord.keys
+      };
+
+      try {
+        await webpush.sendNotification(pushSubscription, payloadStr);
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          console.log(`Deleting expired push subscription for ${usernameClean}`);
+          await PushSubscription.deleteOne({ _id: subRecord._id });
+        } else {
+          console.error(`Error sending push to ${usernameClean}:`, err.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('sendPushToOfflineUser error:', err);
   }
 }

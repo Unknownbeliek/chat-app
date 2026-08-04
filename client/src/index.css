@@ -1,7 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-* {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+:root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body, button, input, textarea, select, p, span, div, h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+code, kbd, pre, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace !important;
 }
 
 /* === Glassmorphism Animated Mesh Background === */
@@ -16,6 +25,8 @@ body {
   min-height: 100vh;
   color: #f4f4f5;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* === Floating Glow Blobs === */
@@ -60,47 +71,47 @@ body {
 
 /* === Glassmorphism Components === */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(18, 16, 32, 0.7);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-header {
-  background: rgba(18, 16, 32, 0.65);
+  background: rgba(18, 16, 32, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-input {
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* === Custom Glass Scrollbar === */
 .chat-scroll::-webkit-scrollbar { 
-  width: 5px; 
+  width: 6px; 
 }
 .chat-scroll::-webkit-scrollbar-track { 
   background: transparent; 
 }
 .chat-scroll::-webkit-scrollbar-thumb { 
-  background: rgba(168, 85, 247, 0.25); 
+  background: rgba(168, 85, 247, 0.3); 
   border-radius: 99px; 
 }
 .chat-scroll::-webkit-scrollbar-thumb:hover { 
-  background: rgba(168, 85, 247, 0.5); 
+  background: rgba(168, 85, 247, 0.6); 
 }
 
 /* === Message Entry Animation === */
