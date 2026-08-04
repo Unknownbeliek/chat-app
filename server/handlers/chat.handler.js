@@ -52,6 +52,8 @@ export async function handleChat(ws, data, currentUsername) {
     const senderName = currentUsername || data.sender || 'Anonymous';
     const targetKey = recipient.toLowerCase();
     const recipientUser = activeUsers.get(targetKey);
+    const isRecipientOnline = !!(recipientUser && recipientUser.ws.readyState === 1);
+    const initialStatus = isRecipientOnline ? 'delivered' : 'sent';
     const isoNow = new Date().toISOString();
 
     const payloadObj = {
@@ -59,6 +61,7 @@ export async function handleChat(ws, data, currentUsername) {
       sender: senderName,
       recipient: recipient,
       message: text,
+      status: initialStatus,
       isOffTheRecord: !!isOffTheRecord,
       timestamp: isoNow
     };
@@ -73,6 +76,7 @@ export async function handleChat(ws, data, currentUsername) {
           recipient: recipient,
           message: text,
           type: 'private_chat',
+          status: initialStatus,
           isOffTheRecord: false,
           timestamp: new Date()
         });
@@ -110,7 +114,7 @@ export async function handleChat(ws, data, currentUsername) {
     }
 
     // Send message payload to recipient via WS
-    if (recipientUser && recipientUser.ws.readyState === 1) {
+    if (isRecipientOnline) {
       recipientUser.ws.send(payloadStr);
 
       // Also send unread count update
@@ -119,6 +123,15 @@ export async function handleChat(ws, data, currentUsername) {
         partner: senderName,
         unreadCount: updatedUnread
       }));
+
+      // Notify sender that message was delivered!
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'message_delivered',
+          partner: recipient,
+          timestamp: isoNow
+        }));
+      }
     } else {
       // Recipient is offline -> deliver Push Notification
       sendPushToOfflineUser(recipient, {
@@ -128,7 +141,8 @@ export async function handleChat(ws, data, currentUsername) {
       });
     }
 
-    if (ws.readyState === 1 && targetKey !== (currentUsername ? currentUsername.toLowerCase() : '')) {
+    // Echo message back to sender
+    if (ws && ws.readyState === 1 && targetKey !== (currentUsername ? currentUsername.toLowerCase() : '')) {
       ws.send(payloadStr);
     }
 
@@ -194,6 +208,27 @@ export async function handleChat(ws, data, currentUsername) {
         { participants: sortedParticipants },
         { $set: { [`unreadCount.${readerName.toLowerCase()}`]: 0 } }
       );
+
+      // Update all private messages from partner (recipient) to reader in DB to 'read'
+      await Message.updateMany(
+        {
+          type: 'private_chat',
+          username: new RegExp(`^${recipient.toLowerCase()}$`, 'i'),
+          recipient: new RegExp(`^${readerName.toLowerCase()}$`, 'i'),
+          status: { $ne: 'read' }
+        },
+        { $set: { status: 'read' } }
+      );
+
+      // Send real-time WS event to partner that reader has read their messages!
+      const partnerUser = activeUsers.get(recipient.toLowerCase());
+      if (partnerUser && partnerUser.ws.readyState === 1) {
+        partnerUser.ws.send(JSON.stringify({
+          type: 'messages_read',
+          by: readerName,
+          partner: readerName
+        }));
+      }
     } catch (err) {
       console.error('Error resetting unread count:', err);
     }

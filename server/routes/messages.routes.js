@@ -32,6 +32,7 @@ router.get('/messages/private', async (req, res) => {
       sender: msg.username,
       recipient: msg.recipient,
       message: msg.message,
+      status: msg.status || 'sent',
       timestamp: new Date(msg.timestamp).toISOString()
     }));
 
@@ -194,11 +195,25 @@ router.post('/chats/read', async (req, res) => {
     if (!username || !partner) {
       return res.status(400).json({ error: 'username and partner are required.' });
     }
-    const sortedParticipants = [username.trim().toLowerCase(), partner.trim().toLowerCase()].sort();
+    const u1 = username.trim().toLowerCase();
+    const u2 = partner.trim().toLowerCase();
+    const sortedParticipants = [u1, u2].sort();
+
     await Conversation.findOneAndUpdate(
       { participants: sortedParticipants },
-      { $set: { [`unreadCount.${username.trim().toLowerCase()}`]: 0 } }
+      { $set: { [`unreadCount.${u1}`]: 0 } }
     );
+
+    await Message.updateMany(
+      {
+        type: 'private_chat',
+        username: new RegExp(`^${u2}$`, 'i'),
+        recipient: new RegExp(`^${u1}$`, 'i'),
+        status: { $ne: 'read' }
+      },
+      { $set: { status: 'read' } }
+    );
+
     res.json({ success: true });
   } catch (err) {
     console.error('Mark read error:', err);

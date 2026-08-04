@@ -44,6 +44,7 @@ export async function handleHistory(ws, data, currentUsername) {
         sender: msg.username,
         recipient: msg.recipient,
         message: msg.message,
+        status: msg.status || 'sent',
         timestamp: new Date(msg.timestamp).toISOString()
       }));
 

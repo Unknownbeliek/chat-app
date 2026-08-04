@@ -106,6 +106,44 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
             }
             break;
 
+          case 'message_delivered':
+            if (data.partner) {
+              setChatHistory(prev => {
+                const partnerKey = Object.keys(prev).find(
+                  k => k.toLowerCase() === data.partner.toLowerCase()
+                ) || data.partner;
+                const existing = prev[partnerKey] || [];
+                return {
+                  ...prev,
+                  [partnerKey]: existing.map(m =>
+                    (m.sender && m.sender.toLowerCase() === username.toLowerCase() && m.status !== 'read')
+                      ? { ...m, status: 'delivered' }
+                      : m
+                  )
+                };
+              });
+            }
+            break;
+
+          case 'messages_read':
+            if (data.partner) {
+              setChatHistory(prev => {
+                const partnerKey = Object.keys(prev).find(
+                  k => k.toLowerCase() === data.partner.toLowerCase()
+                ) || data.partner;
+                const existing = prev[partnerKey] || [];
+                return {
+                  ...prev,
+                  [partnerKey]: existing.map(m =>
+                    (m.sender && m.sender.toLowerCase() === username.toLowerCase())
+                      ? { ...m, status: 'read' }
+                      : m
+                  )
+                };
+              });
+            }
+            break;
+
           case 'private_chat': {
             const isMe = data.sender && data.sender.toLowerCase() === username.toLowerCase();
             const rawPartner = isMe ? data.recipient : data.sender;
@@ -129,6 +167,11 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
                   ...prev,
                   [rawPartner.toLowerCase()]: (prev[rawPartner.toLowerCase()] || 0) + 1
                 }));
+              } else {
+                // If chat is currently open, mark read immediately
+                if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+                  ws.current.send(JSON.stringify({ type: 'mark_read', recipient: rawPartner }));
+                }
               }
               onNotification?.(data.sender, data.message);
             }
