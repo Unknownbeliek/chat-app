@@ -20,7 +20,7 @@ function CodeBlockContainer({ language, codeString }) {
 
   return (
     <div className="my-2 rounded-xl bg-slate-950/95 border border-indigo-500/30 overflow-hidden shadow-2xl text-left font-mono max-w-full group/code">
-      <div className="bg-white/5 px-3 py-1.5 text-[10px] text-indigo-300 font-semibold uppercase tracking-wider border-b border-white/10 flex items-center justify-between">
+      <div className="bg-white/5 px-3 py-1.5 text-[10px] text-indigo-300 font-medium uppercase tracking-wider border-b border-white/10 flex items-center justify-between select-none">
         <div className="flex items-center gap-1.5">
           <Code className="w-3 h-3 text-indigo-400" />
           <span>{language || 'code'}</span>
@@ -62,7 +62,7 @@ function CodeBlockContainer({ language, codeString }) {
   );
 }
 
-// Custom Markdown components for clean glassmorphic dark theme
+// Custom Markdown components for clean Stitch glassmorphic dark theme
 const markdownComponents = {
   code({ node, inline, className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || '');
@@ -73,13 +73,13 @@ const markdownComponents = {
       return <CodeBlockContainer language={language} codeString={codeString} />;
     }
     return (
-      <code className="px-1.5 py-0.5 mx-0.5 rounded bg-slate-950/80 text-indigo-300 font-mono text-[12px] border border-indigo-500/25 select-all" {...props}>
+      <code className="px-1.5 py-0.5 mx-0.5 rounded bg-black/40 text-indigo-200 font-mono text-[12px] border border-indigo-500/25 select-all" {...props}>
         {children}
       </code>
     );
   },
   p({ children }) {
-    return <p className="mb-1 last:mb-0 inline-block w-full text-sm leading-relaxed">{children}</p>;
+    return <p className="mb-1 last:mb-0 inline-block w-full font-normal leading-relaxed text-[13.5px]">{children}</p>;
   },
   table({ children }) {
     return (
@@ -101,7 +101,7 @@ const markdownComponents = {
   },
   blockquote({ children }) {
     return (
-      <blockquote className="my-2 pl-3 border-l-2 border-indigo-400 italic text-zinc-300 bg-white/5 py-1 pr-2 rounded-r">
+      <blockquote className="my-2 pl-3 border-l-2 border-indigo-400 italic text-zinc-200 bg-white/5 py-1 pr-2 rounded-r">
         {children}
       </blockquote>
     );
@@ -114,16 +114,16 @@ const markdownComponents = {
     );
   },
   ul({ children }) {
-    return <ul className="list-disc list-inside my-1 space-y-0.5 text-sm">{children}</ul>;
+    return <ul className="list-disc list-inside my-1 space-y-0.5 text-[13.5px]">{children}</ul>;
   },
   ol({ children }) {
-    return <ol className="list-decimal list-inside my-1 space-y-0.5 text-sm">{children}</ol>;
+    return <ol className="list-decimal list-inside my-1 space-y-0.5 text-[13.5px]">{children}</ol>;
   },
   h1({ children }) {
-    return <h1 className="text-base font-bold text-white my-1 border-b border-white/10 pb-0.5">{children}</h1>;
+    return <h1 className="text-sm font-bold text-white my-1 border-b border-white/10 pb-0.5">{children}</h1>;
   },
   h2({ children }) {
-    return <h2 className="text-sm font-bold text-white my-1">{children}</h2>;
+    return <h2 className="text-xs font-bold text-white my-1">{children}</h2>;
   },
   h3({ children }) {
     return <h3 className="text-xs font-bold text-indigo-200 my-1">{children}</h3>;
@@ -133,7 +133,7 @@ const markdownComponents = {
 // Check if raw text looks like code (e.g. multiline code without backticks)
 function isLikelyRawCode(text) {
   if (!text || typeof text !== 'string') return false;
-  if (text.startsWith('```')) return false; // Already markdown fenced
+  if (text.startsWith('```')) return false;
 
   const lines = text.split('\n');
   if (lines.length < 2) return false;
@@ -233,7 +233,7 @@ export default function MessageBubble({
       onTouchEnd={handleTouchEnd}
       style={{ transform: `translateX(${swipeOffset}px)` }}
       className={`flex items-end gap-2 text-left msg-enter transition-transform duration-100 relative group ${
-        isGrouped ? "mt-1 mb-0.5" : "mt-3 mb-1"
+        isGrouped ? "mt-1 mb-0.5" : "mt-2.5 mb-1"
       } ${isMe ? "flex-row-reverse" : "flex-row"}`}
     >
       {/* Swipe Reply Visual Indicator */}
@@ -259,8 +259,8 @@ export default function MessageBubble({
       <div className={`max-w-[85%] sm:max-w-[70%] flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
         {/* Sender Name Label */}
         {!isGrouped && !isMe && (
-          <div className="flex items-center gap-1.5 mb-1 px-1">
-            <span className="text-[11px] font-semibold text-zinc-300">
+          <div className="flex items-center gap-1.5 mb-1 px-1 select-none">
+            <span className="text-[11px] font-semibold text-indigo-300/90 tracking-wide">
               {isBot ? "🤖 PingBot" : senderName}
             </span>
             {isOtr && (
@@ -273,16 +273,16 @@ export default function MessageBubble({
 
         {/* Message Content Bubble */}
         <div
-          className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words shadow-lg transition-all relative overflow-hidden select-text ${
+          className={`px-3.5 py-2 rounded-2xl text-[13.5px] leading-relaxed break-words transition-all relative overflow-hidden select-text shadow-md ${
             messageData.isWhisper || messageData.whisper
-              ? "bg-purple-950/90 border border-purple-400/60 text-purple-100 rounded-tl-xs shadow-purple-900/40"
+              ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-400/50 text-purple-100 rounded-tl-xs shadow-purple-950/40"
               : messageData.isAction
               ? "bg-amber-950/40 border border-amber-500/30 text-amber-200 italic rounded-tl-xs"
               : isMe
-              ? "bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 text-white rounded-tr-xs shadow-indigo-500/20 border border-indigo-400/30"
+              ? "bg-gradient-to-br from-indigo-600/95 via-indigo-500/95 to-violet-600/95 text-white rounded-tr-xs shadow-indigo-500/25 border border-indigo-400/30 backdrop-blur-md"
               : isBot
-              ? "bg-purple-950/80 border border-purple-500/40 text-purple-100 rounded-tl-xs shadow-purple-900/40"
-              : "bg-slate-800/90 border border-slate-700/60 text-slate-100 rounded-tl-xs shadow-md backdrop-blur-md"
+              ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-500/40 text-purple-100 rounded-tl-xs shadow-purple-900/40"
+              : "bg-slate-900/85 border border-white/12 text-slate-100 rounded-tl-xs shadow-black/30 backdrop-blur-xl"
           } ${isOtr ? "border-dashed border-amber-400/50 bg-amber-950/30" : ""}`}
         >
           {(messageData.isWhisper || messageData.whisper) && (
@@ -292,7 +292,7 @@ export default function MessageBubble({
             </div>
           )}
 
-          <div className="prose prose-invert max-w-none text-sm font-sans leading-relaxed">
+          <div className="text-[13.5px] font-normal leading-relaxed text-slate-100">
             {isAutoCode ? (
               <CodeBlockContainer language="javascript" codeString={rawMessageText} />
             ) : (
@@ -303,11 +303,11 @@ export default function MessageBubble({
           </div>
 
           {/* Bottom Right Timestamp & Status Indicator */}
-          <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-80 font-mono select-none">
+          <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-75 font-mono select-none tracking-wider">
             <span>{formatTimestamp(messageData.timestamp)}</span>
             {isMe && (
               messageData.status === 'read' || messageData.isRead ? (
-                <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline-block drop-shadow-[0_0_4px_rgba(34,211,238,0.5)]" title="Read" />
+                <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline-block drop-shadow-[0_0_4px_rgba(34,211,238,0.6)]" title="Read" />
               ) : messageData.status === 'delivered' || messageData.isDelivered ? (
                 <CheckCheck className="w-3.5 h-3.5 text-white/80 inline-block" title="Delivered" />
               ) : (
@@ -319,7 +319,7 @@ export default function MessageBubble({
 
         {/* Reaction Badge */}
         {reaction && (
-          <span className="absolute -bottom-2 right-2 bg-slate-900 border border-slate-700 text-xs px-1.5 py-0.5 rounded-full shadow-lg animate-bounce">
+          <span className="absolute -bottom-2 right-2 bg-slate-900 border border-slate-700 text-xs px-1.5 py-0.5 rounded-full shadow-lg animate-bounce select-none">
             {reaction}
           </span>
         )}
