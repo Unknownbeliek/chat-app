@@ -1,10 +1,21 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { User } from '../models/User.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'ping_fallback_jwt_secret_key_2026';
 
-router.post('/register', async (req, res) => {
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 auth requests per window
+  message: { error: 'Too many authentication attempts from this IP. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password || username.trim().length < 2) {
@@ -29,14 +40,16 @@ router.post('/register', async (req, res) => {
     const newUser = new User({ username: cleanUsername, password: hashedPassword });
     await newUser.save();
 
-    res.status(201).json({ success: true, username: newUser.username });
+    const token = jwt.sign({ username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(201).json({ success: true, username: newUser.username, token });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Server error during registration.' });
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -54,9 +67,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid password. Please try again.' });
     }
 
+    const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
     res.json({
       success: true,
       username: user.username,
+      token,
       bio: user.bio || '',
       status: user.status || '',
       location: user.location || '',

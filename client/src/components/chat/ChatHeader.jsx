@@ -96,6 +96,7 @@ export default function ChatHeader({
                 onClick={() => onStartCall('voice')}
                 className="p-2 rounded-xl hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 cursor-pointer"
                 title="Start Voice Call"
+                aria-label="Start Voice Call"
               >
                 <Phone className="w-4 h-4 pointer-events-none" />
               </button>
@@ -103,6 +104,7 @@ export default function ChatHeader({
                 onClick={() => onStartCall('video')}
                 className="p-2 rounded-xl hover:bg-indigo-500/20 text-zinc-300 hover:text-indigo-400 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 cursor-pointer"
                 title="Start Video Call"
+                aria-label="Start Video Call"
               >
                 <Video className="w-4 h-4 pointer-events-none" />
               </button>

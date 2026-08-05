@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import AuthCard from "./components/auth/AuthCard";
 import PingSidebar from "./components/sidebar/PingSidebar";
 import ChatWindow from "./components/chat/ChatWindow";
-import ProfileView from "./components/profile/ProfileView";
-import SettingsView from "./components/settings/SettingsView";
 import ConfirmModal from "./components/common/ConfirmModal";
-import NotificationPermissionModal from "./components/common/NotificationPermissionModal";
-import CallModal from "./components/calling/CallModal";
-import CallScreen from "./components/calling/CallScreen";
-import ShortcutsHelpModal from "./components/common/ShortcutsHelpModal";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
 import useKeyboardShortcuts from "./components/hooks/useKeyboardShortcuts";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useWebRTC } from "./hooks/useWebRTC";
 import { subscribeUserToPush } from "./utils/push";
+
+import Toast from "./components/common/Toast";
+
+const ProfileView = lazy(() => import("./components/profile/ProfileView"));
+const SettingsView = lazy(() => import("./components/settings/SettingsView"));
+const NotificationPermissionModal = lazy(() => import("./components/common/NotificationPermissionModal"));
+const CallModal = lazy(() => import("./components/calling/CallModal"));
+const CallScreen = lazy(() => import("./components/calling/CallScreen"));
+const ShortcutsHelpModal = lazy(() => import("./components/common/ShortcutsHelpModal"));
 
 export default function Chat() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -552,6 +555,8 @@ export default function Chat() {
     });
   };
 
+  const [toast, setToast] = useState(null);
+
   // Notification Permission Toggle
   const handleToggleNotifications = async () => {
     if (!notificationsEnabled) {
@@ -559,14 +564,16 @@ export default function Chat() {
         const perm = await Notification.requestPermission();
         if (perm === "granted") {
           setNotificationsEnabled(true);
+          setToast({ message: "Desktop notifications enabled!", type: "success" });
         } else {
-          alert("Notification permission was denied in your browser settings.");
+          setToast({ message: "Notification permission was denied in browser settings.", type: "error" });
         }
       } else {
-        alert("Desktop notifications are not supported in this browser.");
+        setToast({ message: "Desktop notifications are not supported in this browser.", type: "error" });
       }
     } else {
       setNotificationsEnabled(false);
+      setToast({ message: "Desktop notifications disabled.", type: "info" });
     }
   };
 
@@ -582,7 +589,7 @@ export default function Chat() {
     });
   }, [selectedUser, setChatHistory]);
 
-  // Desktop Keyboard Shortcuts Handler Hook
+  // Keyboard & Touch Gesture Shortcuts Hook
   useKeyboardShortcuts({
     searchQuery,
     setSearchQuery,
@@ -600,6 +607,20 @@ export default function Chat() {
     toggleVideo,
     onSendMessage: handleSendMessage
   });
+
+  const currentMessages = React.useMemo(() => {
+    if (!selectedUser || selectedUser === "Global Chat") return chatHistory["Global Chat"] || [];
+    const key = Object.keys(chatHistory).find(k => k && k.toLowerCase() === selectedUser.toLowerCase());
+    return key ? chatHistory[key] : [];
+  }, [selectedUser, chatHistory]);
+
+  const handleTypingSignal = useCallback((currentWpm) => {
+    sendMessage('typing_wpm', {
+      sender: username,
+      recipient: selectedUser,
+      wpm: currentWpm
+    });
+  }, [username, selectedUser, sendMessage]);
 
   if (!isLoggedIn) {
     return (
@@ -620,14 +641,6 @@ export default function Chat() {
   const targetUserInfo = (registeredUsers || []).find(
     u => u && u.username && u.username.toLowerCase() === selectedUser?.toLowerCase()
   );
-
-  const getMessagesForUser = (user) => {
-    if (!user || user === "Global Chat") return chatHistory["Global Chat"] || [];
-    const key = Object.keys(chatHistory).find(k => k && k.toLowerCase() === user.toLowerCase());
-    return key ? chatHistory[key] : [];
-  };
-
-  const currentMessages = getMessagesForUser(selectedUser);
 
   return (
     <div className="h-dvh w-full p-0 sm:p-4 flex items-center justify-center relative overflow-hidden bg-[#0d0b18] text-zinc-100 font-sans select-none">
@@ -658,80 +671,95 @@ export default function Chat() {
 
         {/* Dynamic Main View Area */}
         <div className={`${activeTab !== "chat" && activeTab !== "profile" && activeTab !== "settings" ? "hidden md:flex" : "flex"} flex-1 h-full`}>
-          {activeTab === "profile" ? (
-            <ProfileView
-              username={username}
-              profile={profile}
-              setProfile={setProfile}
-              onSaveProfile={handleSaveProfile}
-              isSaving={isSavingProfile}
-              saveStatus={profileSaveStatus}
-              onBackToChats={() => setActiveTab("chats")}
-            />
-          ) : activeTab === "settings" ? (
-            <SettingsView
-              username={username}
-              soundEnabled={soundEnabled}
-              setSoundEnabled={setSoundEnabled}
-              notificationsEnabled={notificationsEnabled}
-              setNotificationsEnabled={setNotificationsEnabled}
-              onOpenLogoutConfirm={() => setShowLogoutConfirm(true)}
-              onBackToChats={() => setActiveTab("chats")}
-            />
-          ) : (
-            <ChatWindow
-              selectedUser={selectedUser}
-              currentUsername={username}
-              onlineCount={onlineCount}
-              chatMessages={currentMessages}
-              onBackToSidebar={() => setActiveTab("chats")}
-              targetUserInfo={targetUserInfo}
-              inputMessage={inputMessage}
-              setInputMessage={setInputMessage}
-              onSendMessage={handleSendMessage}
-              isOffTheRecord={isOffTheRecord}
-              setIsOffTheRecord={handleToggleOtr}
-              typingUsers={typingUsers}
-              isConnecting={isConnecting}
-              onTyping={(currentWpm) => {
-                sendMessage('typing_wpm', {
-                  sender: username,
-                  recipient: selectedUser,
-                  wpm: currentWpm
-                });
-              }}
-              onLoadOlderHistory={handleLoadOlderHistory}
-              onStartCall={handleStartCall}
-              registeredUsers={registeredUsers}
-              onClearLocalChat={handleClearLocalChat}
-              sendMessage={sendMessage}
-            />
-          )}
+          <Suspense fallback={
+            <div className="w-full h-full flex items-center justify-center bg-slate-950/50">
+              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+            {activeTab === "profile" ? (
+              <ProfileView
+                username={username}
+                profile={profile}
+                setProfile={setProfile}
+                onSaveProfile={handleSaveProfile}
+                isSaving={isSavingProfile}
+                saveStatus={profileSaveStatus}
+                onBackToChats={() => setActiveTab("chats")}
+              />
+            ) : activeTab === "settings" ? (
+              <SettingsView
+                username={username}
+                soundEnabled={soundEnabled}
+                setSoundEnabled={setSoundEnabled}
+                notificationsEnabled={notificationsEnabled}
+                setNotificationsEnabled={setNotificationsEnabled}
+                onOpenLogoutConfirm={() => setShowLogoutConfirm(true)}
+                onBackToChats={() => setActiveTab("chats")}
+              />
+            ) : (
+              <ChatWindow
+                selectedUser={selectedUser}
+                currentUsername={username}
+                onlineCount={onlineCount}
+                chatMessages={currentMessages}
+                onBackToSidebar={() => setActiveTab("chats")}
+                targetUserInfo={targetUserInfo}
+                inputMessage={inputMessage}
+                setInputMessage={setInputMessage}
+                onSendMessage={handleSendMessage}
+                isOffTheRecord={isOffTheRecord}
+                setIsOffTheRecord={handleToggleOtr}
+                typingUsers={typingUsers}
+                isConnecting={isConnecting}
+                onTyping={handleTypingSignal}
+                onLoadOlderHistory={handleLoadOlderHistory}
+                onStartCall={handleStartCall}
+                registeredUsers={registeredUsers}
+                onClearLocalChat={handleClearLocalChat}
+                sendMessage={sendMessage}
+              />
+            )}
+          </Suspense>
         </div>
       </div>
 
-      {/* Incoming / Outgoing Call Ringing Modal */}
-      <CallModal
-        callState={callState}
-        onAccept={handleAcceptCall}
-        onReject={handleRejectCall}
-        mediaError={mediaError}
-      />
+      <Suspense fallback={null}>
+        {/* Incoming / Outgoing Call Ringing Modal */}
+        <CallModal
+          callState={callState}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+          mediaError={mediaError}
+        />
 
-      {/* Active Call Interface */}
-      <CallScreen
-        callState={callState}
-        localStream={localStream}
-        remoteStream={remoteStream}
-        isAudioMuted={isAudioMuted}
-        isVideoMuted={isVideoMuted}
-        isNoiseCancellationEnabled={isNoiseCancellationEnabled}
-        iceState={iceState}
-        onToggleAudio={toggleAudio}
-        onToggleVideo={toggleVideo}
-        onToggleNoiseCancellation={toggleNoiseCancellation}
-        onEndCall={handleEndCall}
-      />
+        {/* Active Call Interface */}
+        <CallScreen
+          callState={callState}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          isAudioMuted={isAudioMuted}
+          isVideoMuted={isVideoMuted}
+          isNoiseCancellationEnabled={isNoiseCancellationEnabled}
+          iceState={iceState}
+          onToggleAudio={toggleAudio}
+          onToggleVideo={toggleVideo}
+          onToggleNoiseCancellation={toggleNoiseCancellation}
+          onEndCall={handleEndCall}
+        />
+
+        {/* Onboarding Notification Permission Modal */}
+        <NotificationPermissionModal
+          isOpen={showNotifModal}
+          onEnable={handleEnableNotif}
+          onSkip={handleSkipNotif}
+        />
+
+        {/* Keyboard & Touch Gesture Shortcuts Cheat Sheet Modal */}
+        <ShortcutsHelpModal
+          isOpen={showShortcutsHelp}
+          onClose={() => setShowShortcutsHelp(false)}
+        />
+      </Suspense>
 
       {/* Reusable Confirm Logout Modal */}
       <ConfirmModal
@@ -743,21 +771,11 @@ export default function Chat() {
         confirmText="Log Out"
       />
 
-      {/* Onboarding Notification Permission Modal */}
-      <NotificationPermissionModal
-        isOpen={showNotifModal}
-        onEnable={handleEnableNotif}
-        onSkip={handleSkipNotif}
-      />
-
-      {/* Keyboard & Touch Gesture Shortcuts Cheat Sheet Modal */}
-      <ShortcutsHelpModal
-        isOpen={showShortcutsHelp}
-        onClose={() => setShowShortcutsHelp(false)}
-      />
-
       {/* PWA Mobile & Desktop App Install Pop-Up Notification */}
       <InstallAppPrompt />
+
+      {/* Global Glassmorphic Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
