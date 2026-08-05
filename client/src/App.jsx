@@ -9,6 +9,7 @@ import NotificationPermissionModal from "./components/common/NotificationPermiss
 import CallModal from "./components/calling/CallModal";
 import CallScreen from "./components/calling/CallScreen";
 import ShortcutsHelpModal from "./components/common/ShortcutsHelpModal";
+import InstallAppPrompt from "./components/common/InstallAppPrompt";
 import useKeyboardShortcuts from "./components/hooks/useKeyboardShortcuts";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useWebRTC } from "./hooks/useWebRTC";
@@ -754,6 +755,9 @@ export default function Chat() {
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
       />
+
+      {/* PWA Mobile & Desktop App Install Pop-Up Notification */}
+      <InstallAppPrompt />
     </div>
   );
 }

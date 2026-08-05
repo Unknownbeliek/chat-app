@@ -21,8 +21,11 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
   // Normalized offset for background ambient parallax (-0.5 to 0.5 ratio)
   const [normalizedOffset, setNormalizedOffset] = useState({ x: 0, y: 0 });
 
-  // 2. Unified Pointer Event Handlers (Works seamlessly for mouse & touch)
+  const animFrameRef = useRef(null);
+
+  // 2. Throttled Pointer Event Handlers (Bypasses touch movement to prevent GPU thrashing & heat on mobile)
   const handlePointerDown = useCallback((e) => {
+    if (e.pointerType === 'touch') return; // Skip touch tracking on mobile
     const { clientX, clientY } = e;
     const { innerWidth, innerHeight } = window;
 
@@ -35,14 +38,20 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
   }, []);
 
   const handlePointerMove = useCallback((e) => {
+    if (e.pointerType === 'touch') return; // Skip touch movement state updates on mobile
+
+    if (animFrameRef.current) return;
     const { clientX, clientY } = e;
     const { innerWidth, innerHeight } = window;
 
-    setIsInteracting(true);
-    setPointerPos({ x: clientX, y: clientY });
-    setNormalizedOffset({
-      x: (clientX - innerWidth / 2) / innerWidth,
-      y: (clientY - innerHeight / 2) / innerHeight,
+    animFrameRef.current = requestAnimationFrame(() => {
+      setIsInteracting(true);
+      setPointerPos({ x: clientX, y: clientY });
+      setNormalizedOffset({
+        x: (clientX - innerWidth / 2) / innerWidth,
+        y: (clientY - innerHeight / 2) / innerHeight,
+      });
+      animFrameRef.current = null;
     });
   }, []);
 
@@ -67,9 +76,9 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
       {/* ========================================================================= */}
       <div className="absolute inset-0 w-full h-full pointer-events-none">
         
-        {/* 1:1 Direct Interactive Spotlight Glow (Sits exactly under cursor/finger) */}
+        {/* 1:1 Direct Interactive Spotlight Glow (Sits exactly under cursor) */}
         <div
-          className={`absolute top-0 left-0 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/80 via-pink-500/80 to-cyan-400/80 blur-3xl pointer-events-none transition-all duration-300 ease-out ${
+          className={`absolute top-0 left-0 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/80 via-pink-500/80 to-cyan-400/80 blur-3xl pointer-events-none transition-all duration-300 ease-out will-change-transform ${
             isInteracting
               ? 'opacity-100 scale-125'
               : 'opacity-0 scale-75'
@@ -81,7 +90,7 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
 
         {/* Ambient Aurora Blob 1: Purple Deep Fill */}
         <div
-          className="absolute -top-[10%] -left-[10%] w-[55vw] h-[55vw] min-w-[350px] min-h-[350px] rounded-full bg-purple-600/70 mix-blend-screen transition-transform duration-700 ease-out blur-sm"
+          className="absolute -top-[10%] -left-[10%] w-[55vw] h-[55vw] min-w-[350px] min-h-[350px] rounded-full bg-purple-600/70 mix-blend-screen transition-transform duration-700 ease-out blur-sm will-change-transform"
           style={{
             transform: `translate3d(${normalizedOffset.x * 120}px, ${normalizedOffset.y * 120}px, 0)`,
           }}
@@ -89,7 +98,7 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
 
         {/* Ambient Aurora Blob 2: Cyan Secondary Parallax */}
         <div
-          className="absolute -bottom-[15%] -right-[10%] w-[60vw] h-[60vw] min-w-[400px] min-h-[400px] rounded-full bg-cyan-500/60 mix-blend-screen transition-transform duration-1000 ease-out blur-sm"
+          className="absolute -bottom-[15%] -right-[10%] w-[60vw] h-[60vw] min-w-[400px] min-h-[400px] rounded-full bg-cyan-500/60 mix-blend-screen transition-transform duration-1000 ease-out blur-sm will-change-transform"
           style={{
             transform: `translate3d(${normalizedOffset.x * -90}px, ${normalizedOffset.y * -90}px, 0)`,
           }}
@@ -97,7 +106,7 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
 
         {/* Ambient Aurora Blob 3: Pink Accent */}
         <div
-          className="absolute top-[25%] left-[25%] w-[45vw] h-[45vw] min-w-[300px] min-h-[300px] rounded-full bg-pink-600/65 mix-blend-screen transition-transform duration-500 ease-out blur-sm"
+          className="absolute top-[25%] left-[25%] w-[45vw] h-[45vw] min-w-[300px] min-h-[300px] rounded-full bg-pink-600/65 mix-blend-screen transition-transform duration-500 ease-out blur-sm will-change-transform"
           style={{
             transform: `translate3d(${normalizedOffset.x * 70}px, ${normalizedOffset.y * 140}px, 0)`,
           }}
@@ -105,7 +114,7 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
 
         {/* Ambient Aurora Blob 4: Indigo Anchor */}
         <div
-          className="absolute bottom-[20%] left-[10%] w-[50vw] h-[50vw] min-w-[320px] min-h-[320px] rounded-full bg-indigo-600/50 mix-blend-screen transition-transform duration-1000 ease-out blur-sm"
+          className="absolute bottom-[20%] left-[10%] w-[50vw] h-[50vw] min-w-[320px] min-h-[320px] rounded-full bg-indigo-600/50 mix-blend-screen transition-transform duration-1000 ease-out blur-sm will-change-transform"
           style={{
             transform: `translate3d(${normalizedOffset.x * -50}px, ${normalizedOffset.y * 80}px, 0)`,
           }}
@@ -113,9 +122,9 @@ export const AmbientAuroraBackground = ({ children, className = '' }) => {
       </div>
 
       {/* ========================================================================= */}
-      {/* LAYER 2: Frosted Glass Overlay (iOS Glassmorphic Effect)                  */}
+      {/* LAYER 2: Frosted Glass Overlay (Mobile Optimized Backdrop Blur)          */}
       {/* ========================================================================= */}
-      <div className="absolute inset-0 w-full h-full bg-slate-950/40 backdrop-blur-[100px] pointer-events-none z-10" />
+      <div className="absolute inset-0 w-full h-full bg-slate-950/40 backdrop-blur-3xl md:backdrop-blur-[100px] pointer-events-none z-10" />
 
       {/* ========================================================================= */}
       {/* LAYER 3: Interactive Children Container                                  */}
