@@ -73,17 +73,20 @@ const markdownComponents = {
       return <CodeBlockContainer language={language} codeString={codeString} />;
     }
     return (
-      <code className="px-1.5 py-0.5 mx-0.5 rounded bg-black/40 text-indigo-200 font-mono text-[12px] border border-indigo-500/25 select-all" {...props}>
+      <code className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 font-mono text-[12px] border border-indigo-500/30 font-medium select-all" {...props}>
         {children}
       </code>
     );
   },
+  pre({ children }) {
+    return <>{children}</>;
+  },
   p({ children }) {
-    return <div className="mb-1 last:mb-0 inline-block w-full font-normal leading-relaxed text-[13.5px]">{children}</div>;
+    return <div className="mb-2 last:mb-0 leading-relaxed text-[13.5px] break-words whitespace-pre-wrap text-slate-100">{children}</div>;
   },
   table({ children }) {
     return (
-      <div className="my-2 overflow-x-auto rounded-lg border border-white/10 max-w-full">
+      <div className="my-2.5 overflow-x-auto rounded-xl border border-indigo-500/20 max-w-full shadow-lg">
         <table className="min-w-full divide-y divide-white/10 text-xs text-left">
           {children}
         </table>
@@ -91,17 +94,17 @@ const markdownComponents = {
     );
   },
   thead({ children }) {
-    return <thead className="bg-white/5 text-zinc-200 font-semibold">{children}</thead>;
+    return <thead className="bg-indigo-950/50 text-indigo-200 font-semibold">{children}</thead>;
   },
   th({ children }) {
-    return <th className="px-3 py-1.5 border-b border-white/10">{children}</th>;
+    return <th className="px-3.5 py-2 border-b border-indigo-500/20 font-medium">{children}</th>;
   },
   td({ children }) {
-    return <td className="px-3 py-1.5 border-b border-white/5 text-zinc-300">{children}</td>;
+    return <td className="px-3.5 py-2 border-b border-white/5 text-zinc-300">{children}</td>;
   },
   blockquote({ children }) {
     return (
-      <blockquote className="my-2 pl-3 border-l-2 border-indigo-400 italic text-zinc-200 bg-white/5 py-1 pr-2 rounded-r">
+      <blockquote className="my-2 pl-3 border-l-2 border-indigo-400 italic text-indigo-200/90 bg-indigo-950/40 py-1.5 pr-2 rounded-r-lg text-xs">
         {children}
       </blockquote>
     );
@@ -114,19 +117,22 @@ const markdownComponents = {
     );
   },
   ul({ children }) {
-    return <ul className="list-disc list-inside my-1 space-y-0.5 text-[13.5px]">{children}</ul>;
+    return <ul className="list-disc list-inside my-2 space-y-1 text-[13.5px] text-slate-100">{children}</ul>;
   },
   ol({ children }) {
-    return <ol className="list-decimal list-inside my-1 space-y-0.5 text-[13.5px]">{children}</ol>;
+    return <ol className="list-decimal list-inside my-2 space-y-1 text-[13.5px] text-slate-100">{children}</ol>;
+  },
+  li({ children }) {
+    return <li className="ml-1 leading-relaxed">{children}</li>;
   },
   h1({ children }) {
-    return <h1 className="text-sm font-bold text-white my-1 border-b border-white/10 pb-0.5">{children}</h1>;
+    return <h1 className="text-sm font-bold text-indigo-200 my-2 border-b border-indigo-500/25 pb-1">{children}</h1>;
   },
   h2({ children }) {
-    return <h2 className="text-xs font-bold text-white my-1">{children}</h2>;
+    return <h2 className="text-xs font-bold text-indigo-300 my-1.5">{children}</h2>;
   },
   h3({ children }) {
-    return <h3 className="text-xs font-bold text-indigo-200 my-1">{children}</h3>;
+    return <h3 className="text-xs font-semibold text-slate-200 my-1">{children}</h3>;
   }
 };
 
@@ -180,6 +186,7 @@ export default function MessageBubble({
 
   const rawMessageText = messageData.message || '';
   const isAutoCode = isLikelyRawCode(rawMessageText);
+  const hasCodeBlocks = rawMessageText.includes('```') || isAutoCode;
 
   // Drag Start (Touch & Mouse)
   const handleStart = (clientX, clientY) => {
@@ -283,7 +290,7 @@ export default function MessageBubble({
         ) : null}
 
         {/* Message Bubble Container */}
-        <div className={`max-w-[85%] sm:max-w-[70%] flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
+        <div className={`${hasCodeBlocks ? "max-w-[92%] sm:max-w-[85%] md:max-w-[720px] w-full" : "max-w-[85%] sm:max-w-[70%]"} flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
           {/* Sender Name Label */}
           {!isGrouped && !isMe && (
             <div className="flex items-center gap-1.5 mb-1 px-1 select-none">
@@ -300,11 +307,15 @@ export default function MessageBubble({
 
           {/* Message Content Bubble */}
           <div
-            className={`px-3.5 py-2 rounded-2xl text-[13.5px] leading-relaxed break-words transition-all relative overflow-hidden select-text shadow-md ${
+            className={`px-3.5 py-2 rounded-2xl text-[13.5px] leading-relaxed break-words transition-all relative overflow-hidden select-text shadow-md w-full ${
               messageData.isWhisper || messageData.whisper
                 ? "bg-gradient-to-br from-purple-950/90 via-slate-900/90 to-purple-950/90 border border-purple-400/50 text-purple-100 rounded-tl-xs shadow-purple-950/40"
                 : messageData.isAction
                 ? "bg-amber-950/40 border border-amber-500/30 text-amber-200 italic rounded-tl-xs"
+                : hasCodeBlocks
+                ? isMe
+                  ? "bg-slate-950/95 border border-indigo-500/40 text-slate-100 rounded-tr-xs shadow-2xl backdrop-blur-2xl ring-1 ring-indigo-500/20"
+                  : "bg-slate-950/95 border border-slate-700/60 text-slate-100 rounded-tl-xs shadow-2xl backdrop-blur-2xl"
                 : isMe
                 ? "bg-gradient-to-br from-indigo-600/95 via-indigo-500/95 to-violet-600/95 text-white rounded-tr-xs shadow-indigo-500/25 border border-indigo-400/30 backdrop-blur-md"
                 : isBot
