@@ -5,6 +5,7 @@ import { WebSocketServer } from 'ws';
 
 import { connectDB } from './config/db.js';
 import { corsConfig } from './middleware/corsConfig.js';
+import { errorHandler } from './middleware/error.middleware.js';
 import { activeUsers } from './services/activeUsers.service.js';
 import { initBroadcastService } from './services/broadcast.service.js';
 

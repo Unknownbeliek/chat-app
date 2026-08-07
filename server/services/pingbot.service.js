@@ -1,9 +1,11 @@
+import { Message } from '../models/Message.js';
+import { Conversation } from '../models/Conversation.js';
 import { broadcast } from './broadcast.service.js';
 
 export async function handlePingBotQuery(query, channelOrUser, requestor, isGlobal, activeUsers) {
   setTimeout(async () => {
     let botAnswer = "";
-    const cleanQuery = query.toLowerCase();
+    const cleanQuery = (query || '').toLowerCase().trim();
 
     // Check for Gemini API key environment variable
     if (process.env.GEMINI_API_KEY) {
@@ -37,22 +39,60 @@ export async function handlePingBotQuery(query, channelOrUser, requestor, isGlob
       } else if (cleanQuery.includes("help") || cleanQuery.includes("code")) {
         botAnswer = "```javascript\n// Example Code Snippet\nconst pingBot = {\n  name: \"@PingBot\",\n  status: \"Online ⚡\",\n  features: [\"Markdown\", \"Syntax Highlighting\", \"OTR Mode\", \"Live WPM\"]\n};\nconsole.log(pingBot);\n```\nAsk me anything by typing `@PingBot <your question>`!";
       } else {
-        botAnswer = `🤖 **@PingBot**: Thanks for your question about "*${query}*"! I am fully integrated into **Ping** to assist you with Markdown code formatting, real-time socket questions, and app guidance.`;
+        botAnswer = `🤖 **@PingBot**: Thanks for your question about "*${query || 'Ping'}*"! I am fully integrated into **Ping** to assist you with Markdown code formatting, real-time socket questions, and app guidance.`;
       }
     }
 
+    const isoNow = new Date().toISOString();
     const botMessageObj = {
       type: isGlobal ? 'global_chat' : 'private_chat',
       sender: 'PingBot',
       recipient: isGlobal ? undefined : requestor,
       message: botAnswer,
       isBotResponse: true,
-      timestamp: new Date().toISOString()
+      status: 'delivered',
+      timestamp: isoNow
     };
+
+    // Save PingBot message asynchronously to MongoDB database for history & active chat tracking
+    if (isGlobal) {
+      Message.create({
+        username: 'PingBot',
+        message: botAnswer,
+        type: 'global_chat',
+        timestamp: new Date()
+      }).catch(dbErr => console.error('Error persisting global PingBot message:', dbErr));
+    } else if (requestor) {
+      Message.create({
+        username: 'PingBot',
+        recipient: requestor,
+        message: botAnswer,
+        type: 'private_chat',
+        status: 'delivered',
+        isOffTheRecord: false,
+        timestamp: new Date()
+      }).catch(dbErr => console.error('Error persisting private PingBot message:', dbErr));
+
+      const sortedParticipants = ['pingbot', requestor.toLowerCase()].sort();
+      Conversation.findOneAndUpdate(
+        { participants: sortedParticipants },
+        {
+          $set: {
+            lastMessage: botAnswer,
+            lastMessageSender: 'PingBot',
+            lastMessageAt: new Date()
+          },
+          $setOnInsert: {
+            participants: sortedParticipants
+          }
+        },
+        { upsert: true, new: true }
+      ).catch(dbErr => console.error('Error updating PingBot conversation:', dbErr));
+    }
 
     if (isGlobal) {
       broadcast(botMessageObj);
-    } else if (activeUsers) {
+    } else if (activeUsers && requestor) {
       const user = activeUsers.get(requestor.toLowerCase());
       if (user && user.ws.readyState === 1) {
         user.ws.send(JSON.stringify(botMessageObj));
@@ -60,3 +100,4 @@ export async function handlePingBotQuery(query, channelOrUser, requestor, isGlob
     }
   }, 400);
 }
+

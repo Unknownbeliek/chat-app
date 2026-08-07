@@ -174,7 +174,7 @@ function isLikelyRawCode(text) {
   return matchingLines >= 2;
 }
 
-export default function MessageBubble({
+function MessageBubble({
   messageData,
   currentUsername,
   registeredUsers = [],
@@ -591,3 +591,5 @@ export default function MessageBubble({
     </>
   );
 }
+
+export default React.memo(MessageBubble);

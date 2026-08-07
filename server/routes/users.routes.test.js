@@ -41,9 +41,10 @@ describe('users.routes.js', () => {
       const res = await request(app).get('/api/users');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.users.length).toBe(2);
-      expect(res.body.users[0].isOnline).toBe(true);
-      expect(res.body.users[1].isOnline).toBe(false);
+      expect(res.body.users.length).toBe(3);
+      expect(res.body.users[0].username).toBe('PingBot');
+      expect(res.body.users[1].isOnline).toBe(true);
+      expect(res.body.users[2].isOnline).toBe(false);
       expect(res.body.onlineCount).toBe(1);
     });
   });

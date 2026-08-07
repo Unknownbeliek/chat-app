@@ -5,7 +5,7 @@ import { formatTimestamp } from '../../utils/dateUtils';
 import { formatLastSeen } from '../chat/ChatHeader';
 import { renderAppleEmojis } from '../../utils/emojiUtils';
 
-export default function ContactItem({
+function ContactItem({
   name,
   currentUsername,
   isOnline,
@@ -169,3 +169,5 @@ export default function ContactItem({
     </div>
   );
 }
+
+export default React.memo(ContactItem);

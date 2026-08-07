@@ -72,8 +72,10 @@ describe('broadcast.service.js', () => {
       const callArg = JSON.parse(openClient.send.mock.calls[0][0]);
       expect(callArg.type).toBe('userList');
       expect(callArg.onlineCount).toBe(1);
-      expect(callArg.users[0].isOnline).toBe(true);
-      expect(callArg.users[1].isOnline).toBe(false);
+      expect(callArg.users.length).toBe(3);
+      expect(callArg.users[0].username).toBe('PingBot');
+      expect(callArg.users[1].isOnline).toBe(true);
+      expect(callArg.users[2].isOnline).toBe(false);
     });
   });
 

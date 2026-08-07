@@ -21,13 +21,16 @@ export function useWpmCalculator() {
     keystrokeTimes.current = keystrokeTimes.current.filter(t => t >= windowStart);
 
     if (keystrokeTimes.current.length > 1) {
-      const timeSpanMinutes = (now - keystrokeTimes.current[0]) / 60000;
+      // Enforce a minimum 1-second sample floor (1/60th of a minute) to prevent initial 2-letter spikes
+      const timeSpanMinutes = Math.max((now - keystrokeTimes.current[0]) / 60000, 1 / 60);
       if (timeSpanMinutes > 0) {
-        // Standard formula: 1 word = 5 characters
+        // Standard WPM formula: 1 word = 5 characters
         const charCount = keystrokeTimes.current.length;
         const wordCount = charCount / 5;
         const calculatedWpm = Math.round(wordCount / timeSpanMinutes);
-        setWpm(Math.min(calculatedWpm, 250)); // Cap at realistic 250 WPM
+        const capped = Math.min(calculatedWpm, 250);
+        // Only update state if WPM changed by at least 2 to prevent React state churn on every letter
+        setWpm(prev => (Math.abs(prev - capped) >= 2 ? capped : prev));
       }
     }
 

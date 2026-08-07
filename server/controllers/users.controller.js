@@ -2,6 +2,17 @@ import { User } from '../models/User.js';
 import { activeUsers } from '../services/activeUsers.service.js';
 import { broadcastUserList } from '../services/broadcast.service.js';
 
+const PINGBOT_USER = {
+  username: 'PingBot',
+  bio: 'AI Assistant & Coding Companion 🤖',
+  status: 'Online ⚡',
+  location: 'Cloud',
+  avatarColor: '#8b5cf6',
+  avatarUrl: '',
+  isOnline: true,
+  lastSeen: null
+};
+
 export async function getAllUsers(req, res, next) {
   try {
     const users = await User.find({}, 'username bio status location avatarColor avatarUrl lastSeen createdAt').lean();
@@ -19,6 +30,10 @@ export async function getAllUsers(req, res, next) {
       lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
     }));
 
+    if (!result.some(u => u.username.toLowerCase() === 'pingbot')) {
+      result.unshift(PINGBOT_USER);
+    }
+
     res.json({
       success: true,
       users: result,
@@ -32,7 +47,16 @@ export async function getAllUsers(req, res, next) {
 export async function getUserProfile(req, res, next) {
   try {
     const { username } = req.params;
-    const user = await User.findOne({ username: new RegExp(`^${username.trim()}$`, 'i') }, 'username bio status location avatarColor avatarUrl createdAt').lean();
+    const cleanName = username.trim().toLowerCase();
+
+    if (cleanName === 'pingbot') {
+      return res.json({
+        success: true,
+        user: PINGBOT_USER
+      });
+    }
+
+    const user = await User.findOne({ username: new RegExp(`^${cleanName}$`, 'i') }, 'username bio status location avatarColor avatarUrl createdAt').lean();
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }

@@ -49,6 +49,18 @@ export async function broadcastUserList() {
       lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
     }));
 
+    if (!usersData.some(u => u.username.toLowerCase() === 'pingbot')) {
+      usersData.unshift({
+        username: 'PingBot',
+        bio: 'AI Assistant & Coding Companion 🤖',
+        status: 'Online ⚡',
+        avatarColor: '#8b5cf6',
+        avatarUrl: '',
+        isOnline: true,
+        lastSeen: null
+      });
+    }
+
     broadcast({
       type: 'userList',
       users: usersData,

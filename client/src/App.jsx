@@ -535,13 +535,17 @@ export default function Chat() {
   };
 
   // Send Message Handler
-  const handleSendMessage = (extraPayload) => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = (textToSend, extraPayload) => {
+    // Support both direct text passing and legacy payload object
+    let msgText = typeof textToSend === 'string' ? textToSend : (textToSend?.message || inputMessage);
+    let payloadExtra = typeof textToSend === 'string' ? extraPayload : textToSend;
+
+    if (!msgText || !msgText.trim()) return;
 
     const basePayload = {
       sender: username,
-      message: inputMessage.trim(),
-      ...(extraPayload || {})
+      message: msgText.trim(),
+      ...(payloadExtra || {})
     };
 
     if (selectedUser === "Global Chat") {

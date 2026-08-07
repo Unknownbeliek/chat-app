@@ -235,10 +235,8 @@ export default function ChatWindow({
 
       {/* Bottom Message Input Bar */}
       <MessageInput
-        inputMessage={inputMessage}
-        setInputMessage={setInputMessage}
-        onSendMessage={(replyData) => {
-          onSendMessage(replyData);
+        onSendMessage={(textToSend, extraPayload) => {
+          onSendMessage(textToSend, extraPayload);
           setReplyTo(null);
         }}
         onTyping={onTyping}

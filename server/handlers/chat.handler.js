@@ -149,8 +149,11 @@ export async function handleChat(ws, data, currentUsername) {
       ws.send(payloadStr);
     }
 
-    if (text.includes('@PingBot')) {
-      const query = text.replace(/@PingBot/gi, '').trim();
+    const isDirectToBot = recipient && recipient.toLowerCase() === 'pingbot';
+    const isBotMention = text && text.includes('@PingBot');
+
+    if (isDirectToBot || isBotMention) {
+      const query = text.replace(/@PingBot/gi, '').trim() || text;
       handlePingBotQuery(query, recipient, senderName, false, activeUsers);
     }
   }

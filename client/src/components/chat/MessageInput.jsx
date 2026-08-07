@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Paperclip, Terminal, CheckCircle, Reply, X } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import SlashCommandPalette, { COMMANDS } from './SlashCommandPalette';
@@ -7,8 +7,8 @@ import { SendIcon } from '../animated-icons';
 import { renderAppleEmojis, hasEmoji } from '../../utils/emojiUtils';
 
 export default function MessageInput({
-  inputMessage,
-  setInputMessage,
+  inputMessage: propInputMessage,
+  setInputMessage: propSetInputMessage,
   onSendMessage,
   onTyping,
   disabled = false,
@@ -20,6 +20,11 @@ export default function MessageInput({
   replyTo = null,
   setReplyTo = () => {}
 }) {
+  // Local state so typing only re-renders MessageInput, NOT the root App or 100+ chat bubbles
+  const [localInputMessage, setLocalInputMessage] = useState("");
+  const inputMessage = propInputMessage !== undefined ? propInputMessage : localInputMessage;
+  const setInputMessage = propSetInputMessage || setLocalInputMessage;
+
   const { wpm, registerKeystroke } = useWpmCalculator();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [paletteIndex, setPaletteIndex] = useState(0);
@@ -27,6 +32,7 @@ export default function MessageInput({
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
   const emojiBtnRef = useRef(null);
+  const lastTypingSignalRef = useRef(0);
 
   // Focus input field when replyTo is selected
   useEffect(() => {
@@ -34,6 +40,12 @@ export default function MessageInput({
       inputRef.current.focus();
     }
   }, [replyTo]);
+
+  // Memoize emoji regex test & DOM element generation to avoid re-parsing on every keystroke
+  const hasEmojiMessage = useMemo(() => hasEmoji(inputMessage), [inputMessage]);
+  const renderedEmojiOverlay = useMemo(() => {
+    return hasEmojiMessage ? renderAppleEmojis(inputMessage) : null;
+  }, [inputMessage, hasEmojiMessage]);
 
   const showSlashPalette = inputMessage.startsWith('/') && !disabled;
   const filterQuery = showSlashPalette ? inputMessage : '';
@@ -45,10 +57,10 @@ export default function MessageInput({
     if (u && u.username) combinedMap.set(u.username.toLowerCase(), u);
   });
   if (selectedUser && selectedUser !== "Global Chat" && !combinedMap.has(selectedUser.toLowerCase())) {
-    combinedMap.set(selectedUser.toLowerCase(), { username: selectedUser, isOnline: true });
+    combinedMap.set(selectedUser.toLowerCase(), { username: selectedUser });
   }
   if (currentUsername && !combinedMap.has(currentUsername.toLowerCase())) {
-    combinedMap.set(currentUsername.toLowerCase(), { username: currentUsername, isOnline: true });
+    combinedMap.set(currentUsername.toLowerCase(), { username: currentUsername });
   }
   const allWhisperCandidates = Array.from(combinedMap.values());
 
@@ -108,7 +120,11 @@ export default function MessageInput({
     const text = e.target.value;
     setInputMessage(text);
     registerKeystroke(text.length);
-    if (onTyping) {
+
+    // Debounce WebSocket typing signals to send at most once every 1000ms
+    const now = Date.now();
+    if (onTyping && now - lastTypingSignalRef.current > 1000) {
+      lastTypingSignalRef.current = now;
       onTyping(wpm);
     }
   };
@@ -204,7 +220,11 @@ export default function MessageInput({
       executeSlashCommand(inputMessage);
       setShowEmojiPicker(false);
     } else {
-      onSendMessage(replyTo ? { replyTo: { id: replyTo._id, sender: replyTo.sender, message: replyTo.message } } : null);
+      const extraPayload = replyTo
+        ? { replyTo: { id: replyTo._id, sender: replyTo.sender, message: replyTo.message } }
+        : null;
+      onSendMessage(inputMessage, extraPayload);
+      setInputMessage("");
       setShowEmojiPicker(false);
     }
   };
@@ -346,10 +366,10 @@ export default function MessageInput({
       {/* Input Field Wrapper */}
       <div className="flex-1 min-w-0 relative flex items-center">
         {/* Live Apple Emoji Input Overlay */}
-        {hasEmoji(inputMessage) && (
+        {hasEmojiMessage && (
           <div className="absolute inset-0 pointer-events-none pl-22 sm:pl-24 pr-12 sm:pr-16 py-3 flex items-center overflow-hidden whitespace-pre text-xs sm:text-sm font-sans z-10">
             <span className="text-zinc-100 flex items-center">
-              {renderAppleEmojis(inputMessage)}
+              {renderedEmojiOverlay}
             </span>
           </div>
         )}
@@ -397,7 +417,7 @@ export default function MessageInput({
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "Waking up server..." : "Type a message or / for commands..."}
           className={`w-full bg-white/5 pl-22 sm:pl-24 pr-12 sm:pr-16 py-3 rounded-2xl text-xs sm:text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner backdrop-blur-md font-sans ${
-            hasEmoji(inputMessage) ? "text-transparent caret-white" : "text-zinc-100"
+            hasEmojiMessage ? "text-transparent caret-white" : "text-zinc-100"
           } ${
             matchedRecipient
               ? "border border-blue-500/80 focus:ring-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
