@@ -38,14 +38,15 @@ export default function ChatHeader({
   const isInCallWithUser = !isGlobal && callState && callState.status !== 'idle' && callState.partnerName?.toLowerCase() === selectedUser?.toLowerCase();
   const userCallStatus = isInCallWithUser ? (callState.status === 'ringing' ? 'calling' : 'in_call') : null;
 
-  const isOnline = isGlobal || targetUserInfo?.isOnline;
+  const isPingBot = selectedUser?.toLowerCase() === 'pingbot';
+  const isOnline = isGlobal || isPingBot || targetUserInfo?.isOnline;
 
   const statusLabel = isGlobal
     ? `${onlineCount} Online`
     : userCallStatus
       ? null
-      : (targetUserInfo?.isOnline
-          ? "Online"
+      : (isOnline
+          ? (isPingBot ? "Online ⚡" : "Online")
           : formatLastSeen(targetUserInfo?.lastSeen));
 
   return (

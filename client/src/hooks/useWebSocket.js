@@ -3,20 +3,47 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // Helper to append messages without duplicates and cap list length at MAX_MESSAGES
 const MAX_MESSAGES = 200;
 
-function appendDeduplicatedMessages(existingList = [], newMsgOrList) {
+export function appendDeduplicatedMessages(existingList = [], newMsgOrList) {
   const newItems = Array.isArray(newMsgOrList) ? newMsgOrList : [newMsgOrList];
-  const existingSet = new Set(
-    existingList.map(m => m._id || `${m.sender}_${m.timestamp}_${m.message?.slice(0, 15)}`)
-  );
+  if (!newItems.length) return existingList;
 
-  const freshItems = newItems.filter(m => {
-    const key = m._id || `${m.sender}_${m.timestamp}_${m.message?.slice(0, 15)}`;
-    return !existingSet.has(key);
-  });
+  let updatedList = [...existingList];
 
-  if (freshItems.length === 0) return existingList;
-  const merged = [...existingList, ...freshItems];
-  return merged.length > MAX_MESSAGES ? merged.slice(merged.length - MAX_MESSAGES) : merged;
+  for (const item of newItems) {
+    if (!item) continue;
+
+    const existingIndex = updatedList.findIndex(m => {
+      if (m._id && item._id && m._id === item._id) return true;
+      const sameSender = m.sender && item.sender && m.sender.toLowerCase() === item.sender.toLowerCase();
+      const sameMessage = m.message === item.message;
+      if (sameSender && sameMessage) {
+        // If either message is missing a database _id (e.g. optimistic local vs server echo), match them
+        if (!m._id || !item._id) return true;
+        const itemTime = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+        const mTime = m.timestamp ? new Date(m.timestamp).getTime() : 0;
+        if (!isNaN(itemTime) && !isNaN(mTime) && itemTime > 0 && mTime > 0) {
+          return Math.abs(itemTime - mTime) < 30000;
+        }
+        return true;
+      }
+      return false;
+    });
+
+    if (existingIndex !== -1) {
+      // Upgrade existing message with _id / status / timestamp from server if present
+      updatedList[existingIndex] = {
+        ...updatedList[existingIndex],
+        ...item
+      };
+    } else {
+      updatedList.push(item);
+    }
+  }
+
+  // Sort by timestamp ascending
+  updatedList.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+
+  return updatedList.length > MAX_MESSAGES ? updatedList.slice(updatedList.length - MAX_MESSAGES) : updatedList;
 }
 
 export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onNotification, onOtrToggle, onCallSignal }) {
@@ -127,9 +154,10 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
                   const partnerKey = Object.keys(prev).find(
                     k => k.toLowerCase() === data.partner.toLowerCase()
                   ) || data.partner;
+                  const existing = prev[partnerKey] || [];
                   return {
                     ...prev,
-                    [partnerKey]: appendDeduplicatedMessages([], data.data)
+                    [partnerKey]: appendDeduplicatedMessages(existing, data.data)
                   };
                 });
               }

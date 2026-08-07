@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handlePingBotQuery } from './pingbot.service.js';
 import * as broadcastService from './broadcast.service.js';
 
+vi.mock('../models/Message.js', () => ({
+  Message: {
+    create: vi.fn().mockResolvedValue({ _id: 'mockmsgid123' })
+  }
+}));
+
+vi.mock('../models/Conversation.js', () => ({
+  Conversation: {
+    findOneAndUpdate: vi.fn().mockResolvedValue({})
+  }
+}));
+
 vi.mock('./broadcast.service.js', () => ({
   broadcast: vi.fn(),
 }));

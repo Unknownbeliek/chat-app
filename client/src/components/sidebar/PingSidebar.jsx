@@ -64,7 +64,7 @@ export default function PingSidebar({
           username: name,
           displayName: regMatch?.displayName || name,
           email: regMatch?.email || '',
-          isOnline: regMatch ? regMatch.isOnline : !!h.isOnline,
+          isOnline: name.toLowerCase() === 'pingbot' ? true : (regMatch ? regMatch.isOnline : !!h.isOnline),
           lastSeen: regMatch ? regMatch.lastSeen : h.lastSeen,
           bio: regMatch?.bio || h.bio || '',
           avatarColor: regMatch?.avatarColor || h.avatarColor || '#6366f1',
@@ -95,7 +95,7 @@ export default function PingSidebar({
           username: u.username,
           displayName: u.displayName || u.username,
           email: u.email || existing.email || '',
-          isOnline: u.isOnline,
+          isOnline: uLower === 'pingbot' ? true : u.isOnline,
           lastSeen: u.lastSeen,
           bio: u.bio || existing.bio || '',
           avatarColor: u.avatarColor || existing.avatarColor || '#6366f1',
@@ -182,6 +182,20 @@ export default function PingSidebar({
             onClick={() => onSelectContact("Global Chat")}
             lastMessage={getLastMsg("Global Chat")}
             bio="Public global chat channel"
+          />
+        )}
+
+        {/* PingBot (Always-visible AI assistant shortcut) */}
+        {(!hasSearch || matchesQuery({ username: "PingBot", bio: "AI Assistant & Coding Companion" }, searchQuery)) && (
+          <ContactItem
+            name="PingBot"
+            currentUsername={currentUsername}
+            isOnline={true}
+            isSelected={selectedUser === "PingBot"}
+            onClick={() => onSelectContact("PingBot")}
+            lastMessage={getLastMsg("PingBot")}
+            bio="🤖 AI Assistant & Coding Companion"
+            avatarColor="#8b5cf6"
           />
         )}
 

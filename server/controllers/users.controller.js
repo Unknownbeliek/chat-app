@@ -8,7 +8,7 @@ const PINGBOT_USER = {
   status: 'Online ⚡',
   location: 'Cloud',
   avatarColor: '#8b5cf6',
-  avatarUrl: '',
+  avatarUrl: process.env.PINGBOT_AVATAR_URL || 'https://api.dicebear.com/7.x/bottts/svg?seed=PingBot',
   isOnline: true,
   lastSeen: null
 };
@@ -26,7 +26,7 @@ export async function getAllUsers(req, res, next) {
       avatarColor: u.avatarColor || '',
       avatarUrl: u.avatarUrl || '',
       createdAt: u.createdAt,
-      isOnline: onlineList.includes(u.username.toLowerCase()),
+      isOnline: u.username.toLowerCase() === 'pingbot' ? true : onlineList.includes(u.username.toLowerCase()),
       lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
     }));
 

@@ -24,6 +24,7 @@ export async function getPrivateMessages(req, res, next) {
       .lean();
 
     const formattedHistory = history.map(msg => ({
+      _id: msg._id ? msg._id.toString() : undefined,
       type: 'private_chat',
       sender: msg.username,
       recipient: msg.recipient,

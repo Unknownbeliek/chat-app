@@ -5,7 +5,7 @@ import ChatWindow from "./components/chat/ChatWindow";
 import ConfirmModal from "./components/common/ConfirmModal";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
 import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
-import { useWebSocket } from "./hooks/useWebSocket";
+import { useWebSocket, appendDeduplicatedMessages } from "./hooks/useWebSocket";
 import { useWebRTC } from "./hooks/useWebRTC";
 import { subscribeUserToPush } from "./utils/push";
 
@@ -423,9 +423,10 @@ export default function Chat() {
           const partnerKey = Object.keys(prev).find(
             k => k.toLowerCase() === targetUser.toLowerCase()
           ) || targetUser;
+          const existing = prev[partnerKey] || [];
           return {
             ...prev,
-            [partnerKey]: data.history
+            [partnerKey]: appendDeduplicatedMessages(existing, data.history)
           };
         });
       }
@@ -551,6 +552,27 @@ export default function Chat() {
     if (selectedUser === "Global Chat") {
       sendMessage('global_chat', basePayload);
     } else {
+      const optimisticMsg = {
+        type: 'private_chat',
+        sender: username,
+        recipient: selectedUser,
+        message: msgText.trim(),
+        status: 'sent',
+        timestamp: new Date().toISOString(),
+        ...(payloadExtra || {})
+      };
+
+      setChatHistory(prev => {
+        const partnerKey = Object.keys(prev).find(
+          k => k.toLowerCase() === selectedUser.toLowerCase()
+        ) || selectedUser;
+        const existing = prev[partnerKey] || [];
+        return {
+          ...prev,
+          [partnerKey]: appendDeduplicatedMessages(existing, optimisticMsg)
+        };
+      });
+
       sendMessage('private_chat', {
         ...basePayload,
         recipient: selectedUser,

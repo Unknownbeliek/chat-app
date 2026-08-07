@@ -45,7 +45,7 @@ export async function broadcastUserList() {
       status: u.status || '',
       avatarColor: u.avatarColor || '',
       avatarUrl: u.avatarUrl || '',
-      isOnline: onlineKeys.includes(u.username.toLowerCase()),
+      isOnline: u.username.toLowerCase() === 'pingbot' ? true : onlineKeys.includes(u.username.toLowerCase()),
       lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
     }));
 
@@ -55,7 +55,7 @@ export async function broadcastUserList() {
         bio: 'AI Assistant & Coding Companion 🤖',
         status: 'Online ⚡',
         avatarColor: '#8b5cf6',
-        avatarUrl: '',
+        avatarUrl: process.env.PINGBOT_AVATAR_URL || 'https://api.dicebear.com/7.x/bottts/svg?seed=PingBot',
         isOnline: true,
         lastSeen: null
       });

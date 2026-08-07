@@ -57,7 +57,29 @@ export async function handleChat(ws, data, currentUsername) {
     const initialStatus = isRecipientOnline ? 'delivered' : 'sent';
     const isoNow = new Date().toISOString();
 
+    let updatedUnread = 1;
+    let newDbMsg = null;
+
+    if (!isOffTheRecord) {
+      try {
+        newDbMsg = new Message({
+          username: senderName,
+          recipient: recipient,
+          message: text,
+          type: 'private_chat',
+          status: initialStatus,
+          isOffTheRecord: false,
+          replyTo: replyTo || null,
+          timestamp: new Date()
+        });
+        await newDbMsg.save();
+      } catch (err) {
+        console.error('Error saving private message:', err);
+      }
+    }
+
     const payloadObj = {
+      _id: newDbMsg ? newDbMsg._id.toString() : undefined,
       type: 'private_chat',
       sender: senderName,
       recipient: recipient,
@@ -69,22 +91,8 @@ export async function handleChat(ws, data, currentUsername) {
     };
     const payloadStr = JSON.stringify(payloadObj);
 
-    let updatedUnread = 1;
-
-    if (!isOffTheRecord) {
+    if (!isOffTheRecord && newDbMsg) {
       try {
-        const newDbMsg = new Message({
-          username: senderName,
-          recipient: recipient,
-          message: text,
-          type: 'private_chat',
-          status: initialStatus,
-          isOffTheRecord: false,
-          replyTo: replyTo || null,
-          timestamp: new Date()
-        });
-        await newDbMsg.save();
-
         // Upsert Conversation record for active chats & unread tracking
         const sortedParticipants = [senderName.toLowerCase(), recipient.toLowerCase()].sort();
         const updatedConvo = await Conversation.findOneAndUpdate(
@@ -154,7 +162,7 @@ export async function handleChat(ws, data, currentUsername) {
 
     if (isDirectToBot || isBotMention) {
       const query = text.replace(/@PingBot/gi, '').trim() || text;
-      handlePingBotQuery(query, recipient, senderName, false, activeUsers);
+      handlePingBotQuery(query, recipient, senderName, false, activeUsers, ws);
     }
   }
 
