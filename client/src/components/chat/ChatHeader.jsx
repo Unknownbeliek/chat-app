@@ -89,7 +89,7 @@ export default function ChatHeader({
       </div>
 
       {/* Grouped Segmented Control Pill Bar */}
-      {!isGlobal && (
+      {!isGlobal && !isPingBot && (
         <div className="bg-white/5 p-1 rounded-2xl flex items-center gap-1 border border-white/10 backdrop-blur-md shadow-md">
           {onStartCall && (
             <>

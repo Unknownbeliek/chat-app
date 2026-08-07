@@ -182,6 +182,14 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
               break;
 
             case 'global_chat':
+              if (data.sender?.toLowerCase() === 'pingbot') {
+                setTypingUsers(prev => {
+                  const copy = { ...prev };
+                  delete copy.PingBot;
+                  delete copy.pingbot;
+                  return copy;
+                });
+              }
               setChatHistory(prev => ({
                 ...prev,
                 "Global Chat": appendDeduplicatedMessages(prev["Global Chat"] || [], data)
@@ -230,6 +238,14 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
               break;
 
             case 'private_chat': {
+              if (data.sender?.toLowerCase() === 'pingbot') {
+                setTypingUsers(prev => {
+                  const copy = { ...prev };
+                  delete copy.PingBot;
+                  delete copy.pingbot;
+                  return copy;
+                });
+              }
               const isMe = data.sender && data.sender.toLowerCase() === username.toLowerCase();
               const rawPartner = isMe ? data.recipient : data.sender;
               if (!rawPartner) break;
@@ -253,7 +269,13 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
                     [rawPartner.toLowerCase()]: (prev[rawPartner.toLowerCase()] || 0) + 1
                   }));
                 } else {
-                  // If chat is currently open, mark read immediately
+                  // If chat is currently open, clear local unread count & mark read on server immediately
+                  setUnreadCounts(prev => {
+                    if (!prev[rawPartner.toLowerCase()]) return prev;
+                    const copy = { ...prev };
+                    delete copy[rawPartner.toLowerCase()];
+                    return copy;
+                  });
                   if (ws.current && ws.current.readyState === WebSocket.OPEN) {
                     ws.current.send(JSON.stringify({ type: 'mark_read', recipient: rawPartner }));
                   }
@@ -318,6 +340,21 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
               }
               break;
 
+            case 'pingbot_thinking':
+              setTypingUsers(prev => ({
+                ...prev,
+                PingBot: 'Thinking...'
+              }));
+              setTimeout(() => {
+                setTypingUsers(prev => {
+                  const copy = { ...prev };
+                  delete copy.PingBot;
+                  delete copy.pingbot;
+                  return copy;
+                });
+              }, 12000);
+              break;
+
             case 'typing_wpm':
               if (data.sender && data.sender.toLowerCase() !== username.toLowerCase()) {
                 setTypingUsers(prev => ({
@@ -371,14 +408,22 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
   }, []);
 
   const clearUnread = useCallback((partner) => {
-    if (!partner) return;
+    if (!partner || partner === "Global Chat") return;
     setUnreadCounts(prev => {
+      if (!prev[partner.toLowerCase()]) return prev;
       const copy = { ...prev };
       delete copy[partner.toLowerCase()];
       return copy;
     });
     sendMessage('mark_read', { recipient: partner });
   }, [sendMessage]);
+
+  // Automatically clear unread count whenever selectedUser changes
+  useEffect(() => {
+    if (selectedUser && selectedUser !== "Global Chat") {
+      clearUnread(selectedUser);
+    }
+  }, [selectedUser, clearUnread]);
 
   return {
     isConnecting,

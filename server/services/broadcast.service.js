@@ -37,15 +37,16 @@ export async function broadcastUserList() {
   if (!activeUsersRef) return;
   try {
     const allDbUsers = await User.find({}, 'username bio status avatarColor avatarUrl lastSeen').lean();
-    const onlineKeys = Array.from(activeUsersRef.keys());
-
+    // Build a Set of usernames that have an active WebSocket connection
+    const onlineUserSet = new Set(Array.from(activeUsersRef.keys()));
     const usersData = allDbUsers.map(u => ({
       username: u.username,
       bio: u.bio || '',
       status: u.status || '',
       avatarColor: u.avatarColor || '',
       avatarUrl: u.avatarUrl || '',
-      isOnline: u.username.toLowerCase() === 'pingbot' ? true : onlineKeys.includes(u.username.toLowerCase()),
+      // PingBot is always online; otherwise rely on the in‑memory Set
+      isOnline: u.username.toLowerCase() === 'pingbot' ? true : onlineUserSet.has(u.username.toLowerCase()),
       lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
     }));
 

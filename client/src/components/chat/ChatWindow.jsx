@@ -210,9 +210,16 @@ export default function ChatWindow({
       {/* Live WPM Typing Indicator Banner */}
       {activeTypers.length > 0 && !isConnecting && (
         <div className="px-4 py-1.5 bg-indigo-950/40 border-t border-indigo-500/20 text-xs text-indigo-300 flex items-center gap-2 animate-pulse">
-          <span className="w-2 h-2 rounded-full bg-indigo-400" />
+          <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
           <span>
-            {activeTypers.map(([user, speed]) => `${user} typing... (${speed || 0} WPM)`).join(", ")}
+            {activeTypers
+              .map(([user, speed]) => {
+                if (user.toLowerCase() === 'pingbot') {
+                  return "🤖 PingBot is thinking...";
+                }
+                return `${user} typing... (${speed || 0} WPM)`;
+              })
+              .join(", ")}
           </span>
         </div>
       )}

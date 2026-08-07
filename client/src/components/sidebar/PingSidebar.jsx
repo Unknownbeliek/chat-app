@@ -59,16 +59,17 @@ export default function PingSidebar({
 
         const regMatch = (registeredUsers || []).find(r => r.username.toLowerCase() === name.toLowerCase());
 
+        const isBot = name.toLowerCase() === 'pingbot';
         userMap.set(name.toLowerCase(), {
           _id: regMatch?._id || name,
           username: name,
           displayName: regMatch?.displayName || name,
           email: regMatch?.email || '',
-          isOnline: name.toLowerCase() === 'pingbot' ? true : (regMatch ? regMatch.isOnline : !!h.isOnline),
+          isOnline: isBot ? true : (regMatch ? regMatch.isOnline : !!h.isOnline),
           lastSeen: regMatch ? regMatch.lastSeen : h.lastSeen,
-          bio: regMatch?.bio || h.bio || '',
-          avatarColor: regMatch?.avatarColor || h.avatarColor || '#6366f1',
-          avatarUrl: regMatch?.avatarUrl || h.avatarUrl || '',
+          bio: isBot ? "🤖 AI Assistant & Coding Companion" : (regMatch?.bio || h.bio || ''),
+          avatarColor: isBot ? "#8b5cf6" : (regMatch?.avatarColor || h.avatarColor || '#6366f1'),
+          avatarUrl: isBot ? "https://api.dicebear.com/7.x/bottts/svg?seed=PingBot" : (regMatch?.avatarUrl || h.avatarUrl || ''),
           lastMessage: getLastMsg(name) || h.lastMessage,
           lastMessageSnippet: h.lastMessage,
           lastMessageSender: h.lastMessageSender,
@@ -97,9 +98,9 @@ export default function PingSidebar({
           email: u.email || existing.email || '',
           isOnline: uLower === 'pingbot' ? true : u.isOnline,
           lastSeen: u.lastSeen,
-          bio: u.bio || existing.bio || '',
-          avatarColor: u.avatarColor || existing.avatarColor || '#6366f1',
-          avatarUrl: u.avatarUrl || existing.avatarUrl || '',
+          bio: uLower === 'pingbot' ? "🤖 AI Assistant & Coding Companion" : (u.bio || existing.bio || ''),
+          avatarColor: uLower === 'pingbot' ? "#8b5cf6" : (u.avatarColor || existing.avatarColor || '#6366f1'),
+          avatarUrl: uLower === 'pingbot' ? "https://api.dicebear.com/7.x/bottts/svg?seed=PingBot" : (u.avatarUrl || existing.avatarUrl || ''),
           lastMessage: lastInMemory || existing.lastMessage,
           lastMessageSnippet: existing.lastMessageSnippet || (typeof lastInMemory === 'string' ? lastInMemory : lastInMemory?.message),
           lastMessageSender: existing.lastMessageSender || lastInMemory?.sender,
@@ -196,6 +197,7 @@ export default function PingSidebar({
             lastMessage={getLastMsg("PingBot")}
             bio="🤖 AI Assistant & Coding Companion"
             avatarColor="#8b5cf6"
+            avatarUrl="https://api.dicebear.com/7.x/bottts/svg?seed=PingBot"
           />
         )}
 

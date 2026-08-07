@@ -657,6 +657,24 @@ export default function Chat() {
     });
   }, [username, selectedUser, sendMessage]);
 
+  const targetUserInfo = React.useMemo(() => {
+    if (!selectedUser) return null;
+    if (selectedUser.toLowerCase() === 'pingbot') {
+      return {
+        username: 'PingBot',
+        bio: 'AI Assistant & Coding Companion 🤖',
+        status: 'Online ⚡',
+        location: 'Cloud',
+        avatarColor: '#8b5cf6',
+        avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=PingBot',
+        isOnline: true
+      };
+    }
+    return (registeredUsers || []).find(
+      u => u && u.username && u.username.toLowerCase() === selectedUser.toLowerCase()
+    );
+  }, [selectedUser, registeredUsers]);
+
   if (!isLoggedIn) {
     return (
       <AuthCard
@@ -672,10 +690,6 @@ export default function Chat() {
       />
     );
   }
-
-  const targetUserInfo = (registeredUsers || []).find(
-    u => u && u.username && u.username.toLowerCase() === selectedUser?.toLowerCase()
-  );
 
   return (
     <div className="h-dvh w-full p-0 sm:p-4 flex items-center justify-center relative overflow-hidden bg-[#0d0b18] text-zinc-100 font-sans select-none">

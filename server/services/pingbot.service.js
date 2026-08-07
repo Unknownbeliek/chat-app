@@ -3,6 +3,13 @@ import { Conversation } from '../models/Conversation.js';
 import { broadcast } from './broadcast.service.js';
 
 export async function handlePingBotQuery(query, channelOrUser, requestor, isGlobal, activeUsers, senderWs) {
+  // Emit a thinking indicator to the client immediately
+  if (isGlobal) {
+    broadcast({ type: 'pingbot_thinking', sender: 'PingBot', recipient: undefined });
+  } else if (senderWs && senderWs.readyState === 1) {
+    senderWs.send(JSON.stringify({ type: 'pingbot_thinking', sender: 'PingBot' }));
+  }
+
   setTimeout(async () => {
     let botAnswer = "";
     const cleanQuery = (query || '').toLowerCase().trim();
