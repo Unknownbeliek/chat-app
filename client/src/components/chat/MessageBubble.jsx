@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -389,121 +390,145 @@ export default function MessageBubble({
             </div>
           </div>
 
-          {/* Reaction Badge */}
+          {/* Dynamic Spring Reaction Badge */}
           {reaction && (
-            <span className="absolute -bottom-2 right-2 bg-slate-900 border border-slate-700 text-xs px-1.5 py-0.5 rounded-full shadow-lg animate-bounce select-none">
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 16 }}
+              className="absolute -bottom-2.5 right-2 bg-slate-900/95 border border-indigo-500/40 text-xs px-2 py-0.5 rounded-full shadow-lg font-medium select-none text-slate-100 ring-1 ring-indigo-500/20"
+            >
               {reaction}
-            </span>
+            </motion.span>
           )}
         </div>
       </div>
 
       {/* Double-Tap / Focus Spotlight Backdrop Overlay */}
-      {isFocusSpotlight && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in"
-          onClick={() => setIsFocusSpotlight(false)}
-        >
-          <div
-            className="w-full max-w-sm flex flex-col items-center gap-4 animate-scale-up"
-            onClick={e => e.stopPropagation()}
+      <AnimatePresence mode="wait">
+        {isFocusSpotlight && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+            onClick={() => setIsFocusSpotlight(false)}
           >
-            {/* Quick Emoji Reaction Pill Bar */}
-            <div className="bg-slate-900/90 border border-white/20 rounded-full px-4 py-2 shadow-2xl flex items-center gap-3 backdrop-blur-xl">
-              {['❤️', '👍', '🔥', '😂', '😮', '👏'].map(emoji => (
-                <button
-                  key={emoji}
-                  onClick={() => {
-                    setReaction(emoji);
-                    setIsFocusSpotlight(false);
-                    if (window.navigator.vibrate) window.navigator.vibrate(30);
-                  }}
-                  className="hover:scale-130 active:scale-95 transition-transform text-2xl cursor-pointer"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-
-            {/* Elevated Focused Message Spotlight Card */}
-            <div
-              className={`w-full p-4 rounded-2xl text-[14px] leading-relaxed shadow-2xl border ${
-                isMe
-                  ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 text-white border-indigo-300/40 ring-4 ring-indigo-500/30"
-                  : "bg-slate-900/95 border-white/20 text-slate-100 ring-4 ring-slate-700/50"
-              }`}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 12 }}
+              transition={{ type: "spring", stiffness: 400, damping: 26 }}
+              className="w-full max-w-sm flex flex-col items-center gap-4"
+              onClick={e => e.stopPropagation()}
             >
-              {!isMe && (
-                <div className="text-xs font-semibold text-indigo-300 mb-1.5">
-                  {senderName}
-                </div>
-              )}
-              {messageData.replyTo && (
-                <div className="border-l-4 border-indigo-300 bg-black/40 rounded-r-xl px-2.5 py-1.5 mb-2 text-xs backdrop-blur-xs select-none">
-                  <div className="font-semibold text-indigo-300 text-[11px] mb-0.5">
-                    Replying to {messageData.replyTo.sender}
-                  </div>
-                  <div className="text-zinc-200/90 text-[12px] truncate">
-                    {messageData.replyTo.message}
-                  </div>
-                </div>
-              )}
-              <div className="text-[14px] leading-relaxed select-text">
-                {isAutoCode ? (
-                  <CodeBlockContainer language="javascript" codeString={rawMessageText} />
-                ) : (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                    {rawMessageText}
-                  </ReactMarkdown>
-                )}
+              {/* Quick Emoji Reaction Pill Bar — Liquid Glass Style */}
+              <div className="bg-slate-900/85 border-t border-white/30 border-b border-black/60 rounded-full px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center gap-3 backdrop-blur-2xl ring-1 ring-white/10">
+                {['❤️', '👍', '🔥', '😂', '😮', '👏'].map(emoji => (
+                  <motion.button
+                    key={emoji}
+                    whileHover={{ scale: 1.3, y: -2 }}
+                    whileTap={{ scale: 0.85 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                    onClick={() => {
+                      setReaction(emoji);
+                      setIsFocusSpotlight(false);
+                      if (window.navigator.vibrate) window.navigator.vibrate(30);
+                    }}
+                    className="text-2xl cursor-pointer select-none"
+                  >
+                    {emoji}
+                  </motion.button>
+                ))}
               </div>
-              <div className="flex items-center justify-end gap-1 mt-2 text-[11px] opacity-75 font-mono">
-                <span>{formatTimestamp(messageData.timestamp)}</span>
-              </div>
-            </div>
 
-            {/* Contextual Action Menu Options */}
-            <div className="w-full bg-slate-900/90 border border-white/15 rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1">
-              <button
-                onClick={copyMessage}
-                className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium"
+              {/* Elevated Focused Message Spotlight Card */}
+              <div
+                className={`w-full p-4 rounded-2xl text-[14px] leading-relaxed shadow-2xl border ${
+                  isMe
+                    ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 text-white border-indigo-300/40 ring-4 ring-indigo-500/30"
+                    : "bg-slate-900/95 border-white/20 text-slate-100 ring-4 ring-slate-700/50"
+                }`}
               >
-                <span className="flex items-center gap-2.5">
-                  <Copy className="w-4 h-4 text-indigo-400" /> Copy Text
-                </span>
-              </button>
-              <button
-                onClick={() => {
-                  if (onReply) onReply(messageData);
-                  setIsFocusSpotlight(false);
-                }}
-                className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-zinc-200 hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium"
-              >
-                <span className="flex items-center gap-2.5">
-                  <Reply className="w-4 h-4 text-purple-400" /> Reply to Message
-                </span>
-              </button>
-              {isMe && onDelete && (
-                <button
-                  onClick={() => {
-                    onDelete(messageData);
-                    setIsFocusSpotlight(false);
-                  }}
-                  className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-rose-400 hover:bg-rose-950/40 flex items-center justify-between cursor-pointer font-medium"
+                {!isMe && (
+                  <div className="text-xs font-semibold text-indigo-300 mb-1.5">
+                    {senderName}
+                  </div>
+                )}
+                {messageData.replyTo && (
+                  <div className="border-l-4 border-indigo-300 bg-black/40 rounded-r-xl px-2.5 py-1.5 mb-2 text-xs backdrop-blur-xs select-none">
+                    <div className="font-semibold text-indigo-300 text-[11px] mb-0.5">
+                      Replying to {messageData.replyTo.sender}
+                    </div>
+                    <div className="text-zinc-200/90 text-[12px] truncate">
+                      {messageData.replyTo.message}
+                    </div>
+                  </div>
+                )}
+                <div className="text-[14px] leading-relaxed select-text">
+                  {isAutoCode ? (
+                    <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {rawMessageText}
+                    </ReactMarkdown>
+                  )}
+                </div>
+                <div className="flex items-center justify-end gap-1 mt-2 text-[11px] opacity-75 font-mono">
+                  <span>{formatTimestamp(messageData.timestamp)}</span>
+                </div>
+              </div>
+
+              {/* Contextual Action Menu Options */}
+              <div className="w-full bg-slate-900/90 border border-white/15 rounded-2xl p-2 shadow-2xl backdrop-blur-xl space-y-1">
+                <motion.button
+                  whileHover={{ x: 4, backgroundColor: "rgba(255,255,255,0.08)" }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={copyMessage}
+                  className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-zinc-200 flex items-center justify-between cursor-pointer font-medium transition-colors"
                 >
                   <span className="flex items-center gap-2.5">
-                    <Trash2 className="w-4 h-4 text-rose-400" /> Delete Message
+                    <Copy className="w-4 h-4 text-indigo-400" /> Copy Text
                   </span>
-                </button>
-              )}
-            </div>
-            
-            <div className="text-[11px] text-zinc-400 font-sans tracking-wide">
-              Tap anywhere outside to close
-            </div>
-          </div>
-        </div>
-      )}
+                </motion.button>
+                <motion.button
+                  whileHover={{ x: 4, backgroundColor: "rgba(255,255,255,0.08)" }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (onReply) onReply(messageData);
+                    setIsFocusSpotlight(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-zinc-200 flex items-center justify-between cursor-pointer font-medium transition-colors"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Reply className="w-4 h-4 text-purple-400" /> Reply to Message
+                  </span>
+                </motion.button>
+                {isMe && onDelete && (
+                  <motion.button
+                    whileHover={{ x: 4, backgroundColor: "rgba(225,29,72,0.15)" }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      onDelete(messageData);
+                      setIsFocusSpotlight(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 rounded-xl text-xs text-rose-400 flex items-center justify-between cursor-pointer font-medium transition-colors"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Trash2 className="w-4 h-4 text-rose-400" /> Delete Message
+                    </span>
+                  </motion.button>
+                )}
+              </div>
+              
+              <div className="text-[11px] text-zinc-400 font-sans tracking-wide">
+                Tap anywhere outside to close
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

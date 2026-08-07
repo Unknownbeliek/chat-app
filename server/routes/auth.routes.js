@@ -31,7 +31,7 @@ router.post('/register', authLimiter, async (req, res) => {
     }
 
     const cleanUsername = username.trim();
-    const existingUser = await User.findOne({ username: new RegExp(`^${cleanUsername}$`, 'i') });
+    const existingUser = await User.findOne({ username: cleanUsername.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ error: 'Username is already taken. Please choose another.' });
     }
@@ -42,7 +42,16 @@ router.post('/register', authLimiter, async (req, res) => {
 
     const token = jwt.sign({ username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
 
-    res.status(201).json({ success: true, username: newUser.username, token });
+    res.status(201).json({
+      success: true,
+      username: newUser.username,
+      token,
+      bio: newUser.bio || 'Hey there! I am using ping.',
+      status: newUser.status || 'Available',
+      location: newUser.location || '',
+      avatarColor: newUser.avatarColor || '#6366f1',
+      avatarUrl: newUser.avatarUrl || ''
+    });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Server error during registration.' });
@@ -57,7 +66,7 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     const cleanUsername = username.trim();
-    const user = await User.findOne({ username: new RegExp(`^${cleanUsername}$`, 'i') });
+    const user = await User.findOne({ username: cleanUsername.toLowerCase() });
     if (!user) {
       return res.status(400).json({ error: 'User not found. Please register first.' });
     }

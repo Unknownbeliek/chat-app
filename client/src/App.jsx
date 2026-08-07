@@ -459,10 +459,19 @@ export default function Chat() {
       const data = await response.json();
 
       if (data.success) {
+        const sessionUser = {
+          username: data.username || username.trim(),
+          token: data.token || "",
+          bio: data.bio || "Hey there! I am using ping.",
+          status: data.status || "Available",
+          location: data.location || "",
+          avatarColor: data.avatarColor || "#6366f1",
+          avatarUrl: data.avatarUrl || ""
+        };
         setIsLoggedIn(true);
-        if (data.user) {
-          localStorage.setItem("ping_user", JSON.stringify(data.user));
-          if (data.user.bio) setProfile(prev => ({ ...prev, ...data.user }));
+        localStorage.setItem("ping_user", JSON.stringify(sessionUser));
+        if (sessionUser.bio) {
+          setProfile(prev => ({ ...prev, ...sessionUser }));
         }
       } else {
         setAuthError(data.error || "Authentication failed.");

@@ -15,7 +15,7 @@ export async function handleRegister(ws, data) {
   // Update DB: set user online
   try {
     await User.findOneAndUpdate(
-      { username: new RegExp(`^${lowerKey}$`, 'i') },
+      { username: lowerKey },
       { isOnline: true, lastSeen: new Date() }
     );
   } catch (err) {
@@ -47,7 +47,7 @@ export async function handleDisconnect(ws, currentUsername) {
       const now = new Date();
       try {
         await User.findOneAndUpdate(
-          { username: new RegExp(`^${lowerKey}$`, 'i') },
+          { username: lowerKey },
           { isOnline: false, lastSeen: now }
         );
       } catch (err) {
