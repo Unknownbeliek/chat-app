@@ -4,7 +4,7 @@ import PingSidebar from "./components/sidebar/PingSidebar";
 import ChatWindow from "./components/chat/ChatWindow";
 import ConfirmModal from "./components/common/ConfirmModal";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
-import useKeyboardShortcuts from "./components/hooks/useKeyboardShortcuts";
+import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useWebRTC } from "./hooks/useWebRTC";
 import { subscribeUserToPush } from "./utils/push";

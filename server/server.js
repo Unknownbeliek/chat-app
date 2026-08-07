@@ -35,6 +35,7 @@ app.use('/api', authRouter);
 app.use('/api', usersRouter);
 app.use('/api', messagesRouter);
 app.use('/api/push', pushRouter);
+app.use(errorHandler);
 
 // HTTP & WebSocket Servers
 const server = http.createServer(app);

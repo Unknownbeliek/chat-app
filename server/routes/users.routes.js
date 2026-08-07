@@ -1,106 +1,20 @@
 import express from 'express';
-import { User } from '../models/User.js';
-import { activeUsers } from '../services/activeUsers.service.js';
-import { broadcastUserList } from '../services/broadcast.service.js';
+import {
+  getAllUsers,
+  getUserProfile,
+  updateUserProfile
+} from '../controllers/users.controller.js';
 
 const router = express.Router();
 
 // REST Endpoint: Get All Registered Users with Online Status
-router.get('/users', async (req, res) => {
-  try {
-    const users = await User.find({}, 'username bio status location avatarColor avatarUrl lastSeen createdAt').lean();
-    const onlineList = Array.from(activeUsers.values()).map(u => u.originalName.toLowerCase());
-
-    const result = users.map(u => ({
-      username: u.username,
-      bio: u.bio || 'Hey there! I am using ping.',
-      status: u.status || 'Available',
-      location: u.location || '',
-      avatarColor: u.avatarColor || '',
-      avatarUrl: u.avatarUrl || '',
-      createdAt: u.createdAt,
-      isOnline: onlineList.includes(u.username.toLowerCase()),
-      lastSeen: u.lastSeen ? new Date(u.lastSeen).toISOString() : null
-    }));
-
-    res.json({
-      success: true,
-      users: result,
-      onlineCount: activeUsers.size
-    });
-  } catch (err) {
-    console.error('Fetch users error:', err);
-    res.status(500).json({ error: 'Server error fetching users.' });
-  }
-});
+router.get('/users', getAllUsers);
 
 // REST Endpoint: Get Profile Details
-router.get('/profile/:username', async (req, res) => {
-  try {
-    const { username } = req.params;
-    const user = await User.findOne({ username: new RegExp(`^${username.trim()}$`, 'i') }, 'username bio status location avatarColor avatarUrl createdAt').lean();
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-    const isOnline = activeUsers.has(user.username.toLowerCase());
-    res.json({
-      success: true,
-      user: {
-        ...user,
-        isOnline
-      }
-    });
-  } catch (err) {
-    console.error('Get profile error:', err);
-    res.status(500).json({ error: 'Server error fetching profile.' });
-  }
-});
+router.get('/profile/:username', getUserProfile);
 
 // REST Endpoint: Update User Profile (PUT /api/profile or PATCH /api/users/me)
-const handleUpdateProfile = async (req, res) => {
-  try {
-    const username = req.body.username || req.headers['x-username'];
-    const { bio, status, location, avatarColor, avatarUrl } = req.body;
-    if (!username) {
-      return res.status(400).json({ error: 'Username is required.' });
-    }
-
-    const cleanUsername = username.trim();
-    const user = await User.findOne({ username: new RegExp(`^${cleanUsername}$`, 'i') });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    if (bio !== undefined) user.bio = bio.trim();
-    if (status !== undefined) user.status = status.trim();
-    if (location !== undefined) user.location = location.trim();
-    if (avatarColor !== undefined) user.avatarColor = avatarColor.trim();
-    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl.trim();
-
-    await user.save();
-
-    // Broadcast updated user list to all online clients
-    broadcastUserList();
-
-    res.json({
-      success: true,
-      user: {
-        username: user.username,
-        bio: user.bio,
-        status: user.status,
-        location: user.location,
-        avatarColor: user.avatarColor,
-        avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt
-      }
-    });
-  } catch (err) {
-    console.error('Update profile error:', err);
-    res.status(500).json({ error: 'Server error updating profile.' });
-  }
-};
-
-router.put('/profile', handleUpdateProfile);
-router.patch('/users/me', handleUpdateProfile);
+router.put('/profile', updateUserProfile);
+router.patch('/users/me', updateUserProfile);
 
 export default router;

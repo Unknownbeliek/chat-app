@@ -1,5 +1,17 @@
 {
+  "name": "ping-workspace",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "test:client": "npm run test --prefix client",
+    "test:server": "npm run test --prefix server",
+    "test": "npm run test:client && npm run test:server",
     "release": "release-it"
   },
   "release-it": {
@@ -10,12 +22,15 @@
       "release": true
     },
     "npm": {
-      "publish": false 
+      "publish": false
     },
     "plugins": {
       "@release-it/conventional-changelog": {
         "preset": "angular"
       }
     }
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
   }
 }
