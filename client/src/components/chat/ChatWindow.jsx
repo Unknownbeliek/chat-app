@@ -145,7 +145,7 @@ export default function ChatWindow({
         role="log"
         aria-live="polite"
         aria-label="Chat message history"
-        className="flex-1 overflow-y-auto chat-scroll p-4 space-y-2 relative flex flex-col"
+        className="flex-1 min-h-0 overflow-y-auto chat-scroll p-4 space-y-2 relative flex flex-col"
       >
         {/* Server Connecting Banner Overlay */}
         {isConnecting && (

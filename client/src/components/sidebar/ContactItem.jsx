@@ -3,6 +3,7 @@ import { VolumeX, Trash2 } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import { formatTimestamp } from '../../utils/dateUtils';
 import { formatLastSeen } from '../chat/ChatHeader';
+import { renderAppleEmojis } from '../../utils/emojiUtils';
 
 export default function ContactItem({
   name,
@@ -161,7 +162,7 @@ export default function ContactItem({
             </div>
           </div>
           <p className={`text-xs truncate max-w-[180px] ${hasUnread ? "text-purple-200 font-medium" : "text-zinc-400"}`}>
-            {getSubtext()}
+            {renderAppleEmojis(getSubtext())}
           </p>
         </div>
       </button>

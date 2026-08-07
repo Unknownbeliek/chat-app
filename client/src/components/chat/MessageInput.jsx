@@ -4,6 +4,7 @@ import EmojiPicker from './EmojiPicker';
 import SlashCommandPalette, { COMMANDS } from './SlashCommandPalette';
 import { useWpmCalculator } from '../../hooks/useWpmCalculator';
 import { SendIcon } from '../animated-icons';
+import { renderAppleEmojis, hasEmoji } from '../../utils/emojiUtils';
 
 export default function MessageInput({
   inputMessage,
@@ -25,6 +26,7 @@ export default function MessageInput({
   const [toastMessage, setToastMessage] = useState(null);
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
+  const emojiBtnRef = useRef(null);
 
   // Focus input field when replyTo is selected
   useEffect(() => {
@@ -72,15 +74,24 @@ export default function MessageInput({
     ? allWhisperCandidates.find(u => u.username.toLowerCase() === typedWhisperTarget.toLowerCase())
     : null;
 
-  // Close emoji picker popover when clicking outside
+  // Close emoji picker popover when clicking/touching outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+      if (
+        pickerRef.current &&
+        !pickerRef.current.contains(e.target) &&
+        emojiBtnRef.current &&
+        !emojiBtnRef.current.contains(e.target)
+      ) {
         setShowEmojiPicker(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   // Reset palette selection index when query changes
@@ -106,7 +117,7 @@ export default function MessageInput({
     if (emojiChar) {
       setInputMessage(prev => prev + emojiChar);
     }
-    setShowEmojiPicker(false);
+    // Picker remains open for multi-emoji selection until clicking/touching outside
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -261,7 +272,7 @@ export default function MessageInput({
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-3 glass-header border-t border-white/10 flex flex-col gap-2 sticky bottom-0 z-20 relative"
+      className="p-3 glass-header border-t border-white/10 flex flex-col gap-2 flex-shrink-0 z-20 relative"
     >
       {/* WhatsApp-Style Replying-To Preview Banner */}
       {replyTo && (
@@ -333,9 +344,18 @@ export default function MessageInput({
       )}
 
       {/* Input Field Wrapper */}
-      <div className="flex-1 relative flex items-center">
+      <div className="flex-1 min-w-0 relative flex items-center">
+        {/* Live Apple Emoji Input Overlay */}
+        {hasEmoji(inputMessage) && (
+          <div className="absolute inset-0 pointer-events-none pl-22 sm:pl-24 pr-12 sm:pr-16 py-3 flex items-center overflow-hidden whitespace-pre text-xs sm:text-sm font-sans z-10">
+            <span className="text-zinc-100 flex items-center">
+              {renderAppleEmojis(inputMessage)}
+            </span>
+          </div>
+        )}
+
         {/* Attachment, Emoji & Slash Trigger Buttons */}
-        <div className="absolute left-3 flex items-center gap-1.5 z-10">
+        <div className="absolute left-2.5 sm:left-3 flex items-center gap-1 sm:gap-1.5 z-20">
           <button
             type="button"
             disabled={disabled}
@@ -357,6 +377,7 @@ export default function MessageInput({
           </button>
 
           <button
+            ref={emojiBtnRef}
             type="button"
             disabled={disabled}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -374,16 +395,18 @@ export default function MessageInput({
           value={inputMessage}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "Waking up server... Please wait." : "Type a message or / for commands..."}
-          className={`w-full bg-white/5 pl-24 pr-16 py-3 rounded-2xl text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner backdrop-blur-md font-sans ${
+          placeholder={disabled ? "Waking up server..." : "Type a message or / for commands..."}
+          className={`w-full bg-white/5 pl-22 sm:pl-24 pr-12 sm:pr-16 py-3 rounded-2xl text-xs sm:text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner backdrop-blur-md font-sans ${
+            hasEmoji(inputMessage) ? "text-transparent caret-white" : "text-zinc-100"
+          } ${
             matchedRecipient
-              ? "border border-blue-500/80 text-blue-100 focus:ring-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
-              : "border border-white/10 text-zinc-100 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+              ? "border border-blue-500/80 focus:ring-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
+              : "border border-white/10 focus:ring-indigo-500/50 focus:border-indigo-500/50"
           }`}
         />
 
         {wpm > 0 && !disabled && (
-          <span className="absolute right-3 text-[10px] text-indigo-400 font-mono bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/30 select-none pointer-events-none">
+          <span className="absolute right-3 text-[10px] text-indigo-400 font-mono bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/30 select-none pointer-events-none hidden sm:inline-block">
             {wpm} WPM
           </span>
         )}
@@ -393,10 +416,10 @@ export default function MessageInput({
       <button
         type="submit"
         disabled={disabled || !inputMessage.trim()}
-        className="w-11 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex-shrink-0 cursor-pointer"
+        className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex-shrink-0 cursor-pointer"
         title="Send Message"
       >
-        <SendIcon className="w-5 h-5 pointer-events-none" />
+        <SendIcon className="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" />
       </button>
       </div>
     </form>

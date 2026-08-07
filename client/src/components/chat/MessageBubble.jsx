@@ -4,9 +4,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Reply, Copy, Check, Trash2, CheckCheck, Code } from 'lucide-react';
+import { Reply, Copy, Check, Trash2, CheckCheck, Code, ChevronDown, ChevronUp } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import { formatTimestamp } from '../../utils/dateUtils';
+import { renderAppleEmojis } from '../../utils/emojiUtils';
 
 // Helper to copy text to clipboard with feedback
 function CodeBlockContainer({ language, codeString }) {
@@ -43,7 +44,7 @@ function CodeBlockContainer({ language, codeString }) {
           )}
         </button>
       </div>
-      <div className="overflow-x-auto p-3 text-xs leading-relaxed">
+      <div className="overflow-x-auto max-h-64 sm:max-h-72 overflow-y-auto chat-scroll p-3 text-xs leading-relaxed">
         <SyntaxHighlighter
           style={vscDarkPlus}
           language={language || 'javascript'}
@@ -61,6 +62,21 @@ function CodeBlockContainer({ language, codeString }) {
       </div>
     </div>
   );
+}
+
+function processChildrenWithEmojis(children) {
+  if (typeof children === 'string') {
+    return renderAppleEmojis(children);
+  }
+  if (Array.isArray(children)) {
+    return React.Children.map(children, (child) => {
+      if (typeof child === 'string') {
+        return renderAppleEmojis(child);
+      }
+      return child;
+    });
+  }
+  return children;
 }
 
 // Custom Markdown components for clean Stitch glassmorphic dark theme
@@ -83,11 +99,11 @@ const markdownComponents = {
     return <>{children}</>;
   },
   p({ children }) {
-    return <div className="mb-2 last:mb-0 leading-relaxed text-[13.5px] break-words whitespace-pre-wrap text-slate-100">{children}</div>;
+    return <div className="mb-1.5 last:mb-0 leading-relaxed text-[13px] break-words whitespace-pre-wrap text-slate-100">{processChildrenWithEmojis(children)}</div>;
   },
   table({ children }) {
     return (
-      <div className="my-2.5 overflow-x-auto rounded-xl border border-indigo-500/20 max-w-full shadow-lg">
+      <div className="my-2 overflow-x-auto max-h-52 overflow-y-auto chat-scroll rounded-xl border border-indigo-500/20 max-w-full shadow-lg">
         <table className="min-w-full divide-y divide-white/10 text-xs text-left">
           {children}
         </table>
@@ -98,42 +114,42 @@ const markdownComponents = {
     return <thead className="bg-indigo-950/50 text-indigo-200 font-semibold">{children}</thead>;
   },
   th({ children }) {
-    return <th className="px-3.5 py-2 border-b border-indigo-500/20 font-medium">{children}</th>;
+    return <th className="px-3.5 py-2 border-b border-indigo-500/20 font-medium">{processChildrenWithEmojis(children)}</th>;
   },
   td({ children }) {
-    return <td className="px-3.5 py-2 border-b border-white/5 text-zinc-300">{children}</td>;
+    return <td className="px-3.5 py-2 border-b border-white/5 text-zinc-300">{processChildrenWithEmojis(children)}</td>;
   },
   blockquote({ children }) {
     return (
-      <blockquote className="my-2 pl-3 border-l-2 border-indigo-400 italic text-indigo-200/90 bg-indigo-950/40 py-1.5 pr-2 rounded-r-lg text-xs">
-        {children}
+      <blockquote className="my-1.5 pl-3 border-l-2 border-indigo-400 italic text-indigo-200/90 bg-indigo-950/40 py-1 pr-2 rounded-r-lg text-xs">
+        {processChildrenWithEmojis(children)}
       </blockquote>
     );
   },
   a({ href, children }) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-300 hover:text-indigo-200 underline font-medium">
-        {children}
+        {processChildrenWithEmojis(children)}
       </a>
     );
   },
   ul({ children }) {
-    return <ul className="list-disc list-inside my-2 space-y-1 text-[13.5px] text-slate-100">{children}</ul>;
+    return <ul className="list-disc list-inside my-1.5 space-y-0.5 text-[13px] text-slate-100">{children}</ul>;
   },
   ol({ children }) {
-    return <ol className="list-decimal list-inside my-2 space-y-1 text-[13.5px] text-slate-100">{children}</ol>;
+    return <ol className="list-decimal list-inside my-1.5 space-y-0.5 text-[13px] text-slate-100">{children}</ol>;
   },
   li({ children }) {
-    return <li className="ml-1 leading-relaxed">{children}</li>;
+    return <li className="ml-1 leading-relaxed">{processChildrenWithEmojis(children)}</li>;
   },
   h1({ children }) {
-    return <h1 className="text-sm font-bold text-indigo-200 my-2 border-b border-indigo-500/25 pb-1">{children}</h1>;
+    return <h1 className="text-xs font-bold text-indigo-200 my-1 border-b border-indigo-500/25 pb-0.5">{processChildrenWithEmojis(children)}</h1>;
   },
   h2({ children }) {
-    return <h2 className="text-xs font-bold text-indigo-300 my-1.5">{children}</h2>;
+    return <h2 className="text-xs font-bold text-indigo-300 my-1">{processChildrenWithEmojis(children)}</h2>;
   },
   h3({ children }) {
-    return <h3 className="text-xs font-semibold text-slate-200 my-1">{children}</h3>;
+    return <h3 className="text-xs font-semibold text-slate-200 my-0.5">{processChildrenWithEmojis(children)}</h3>;
   }
 };
 
@@ -180,6 +196,7 @@ export default function MessageBubble({
   const [reaction, setReaction] = useState(messageData.reaction || null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const startPos = useRef({ x: 0, y: 0 });
   const touchTimer = useRef(null);
@@ -189,6 +206,10 @@ export default function MessageBubble({
   const rawMessageText = messageData.message || '';
   const isAutoCode = isLikelyRawCode(rawMessageText);
   const hasCodeBlocks = rawMessageText.includes('```') || isAutoCode;
+
+  // Determine if content is considered a long message (> 12 lines or > 400 chars)
+  const lineCount = rawMessageText.split('\n').length;
+  const isLongMessage = rawMessageText.length > 400 || lineCount > 12;
 
   // Drag / Press Start Handler
   const handleStart = (clientX, clientY, isTouch = false) => {
@@ -313,7 +334,7 @@ export default function MessageBubble({
         ) : null}
 
         {/* Message Bubble Container */}
-        <div className={`${hasCodeBlocks ? "max-w-[92%] sm:max-w-[85%] md:max-w-[720px] w-full" : "max-w-[85%] sm:max-w-[70%]"} flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
+        <div className={`${hasCodeBlocks ? "max-w-[92%] sm:max-w-[85%] md:max-w-[78%]" : "max-w-[85%] sm:max-w-[70%]"} flex flex-col relative ${isMe ? "items-end" : "items-start"}`}>
           {/* Sender Name Label */}
           {!isGrouped && !isMe && (
             <div className="flex items-center gap-1.5 mb-1 px-1 select-none">
@@ -353,7 +374,7 @@ export default function MessageBubble({
                   Replying to {messageData.replyTo.sender}
                 </div>
                 <div className="text-zinc-200/90 text-[12px] truncate line-clamp-1">
-                  {messageData.replyTo.message}
+                  {renderAppleEmojis(messageData.replyTo.message)}
                 </div>
               </div>
             )}
@@ -366,14 +387,52 @@ export default function MessageBubble({
             )}
 
             <div className="text-[13.5px] font-normal leading-relaxed text-slate-100">
-              {isAutoCode ? (
-                <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+              {isLongMessage && !isExpanded ? (
+                <div className="relative overflow-hidden max-h-[260px] transition-all duration-300">
+                  {isAutoCode ? (
+                    <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {rawMessageText}
+                    </ReactMarkdown>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+                </div>
               ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {rawMessageText}
-                </ReactMarkdown>
+                isAutoCode ? (
+                  <CodeBlockContainer language="javascript" codeString={rawMessageText} />
+                ) : (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {rawMessageText}
+                  </ReactMarkdown>
+                )
               )}
             </div>
+
+            {/* Collapsible Expand / Collapse Button */}
+            {isLongMessage && (
+              <div className="mt-1.5 mb-0.5 flex justify-start">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                  }}
+                  className="text-xs font-semibold text-indigo-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer select-none bg-indigo-500/20 hover:bg-indigo-500/30 px-2.5 py-1 rounded-lg border border-indigo-500/30"
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                      <span>Show less</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Show more ({Math.max(1, lineCount - 8)} more lines)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
 
             {/* Bottom Right Timestamp & Status Indicator */}
             <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-75 font-mono select-none tracking-wider">
@@ -445,7 +504,7 @@ export default function MessageBubble({
 
               {/* Elevated Focused Message Spotlight Card */}
               <div
-                className={`w-full p-4 rounded-2xl text-[14px] leading-relaxed shadow-2xl border ${
+                className={`w-full p-4 rounded-2xl text-[14px] leading-relaxed shadow-2xl border max-h-[65vh] overflow-y-auto chat-scroll ${
                   isMe
                     ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 text-white border-indigo-300/40 ring-4 ring-indigo-500/30"
                     : "bg-slate-900/95 border-white/20 text-slate-100 ring-4 ring-slate-700/50"

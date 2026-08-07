@@ -679,7 +679,7 @@ export default function Chat() {
         </div>
 
         {/* Dynamic Main View Area */}
-        <div className={`${activeTab !== "chat" && activeTab !== "profile" && activeTab !== "settings" ? "hidden md:flex" : "flex"} flex-1 h-full`}>
+        <div className={`${activeTab !== "chat" && activeTab !== "profile" && activeTab !== "settings" ? "hidden md:flex" : "flex"} flex-1 h-full min-h-0 min-w-0`}>
           <Suspense fallback={
             <div className="w-full h-full flex items-center justify-center bg-slate-950/50">
               <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />

@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { Search, X } from 'lucide-react';
-
-export function getAppleEmojiUrl(emojiStr) {
-  const hexes = [];
-  for (const ch of emojiStr) {
-    hexes.push(ch.codePointAt(0).toString(16));
-  }
-  const unified = hexes.join('-');
-  return `https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/64/${unified}.png`;
-}
+import { getAppleEmojiUrl } from '../../utils/emojiUtils';
 
 const EMOJI_CATEGORIES = [
   {
