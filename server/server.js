@@ -48,6 +48,8 @@ initBroadcastService(wss, activeUsers);
 // WebSocket Central Router
 wss.on('connection', async (ws) => {
   let currentUsername = null;
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   console.log('WebSocket Client Connected');
 
   // Send initial global history on connect
@@ -78,6 +80,20 @@ wss.on('connection', async (ws) => {
     console.log('WebSocket Client Disconnected');
   });
 });
+
+// Heartbeat: ping every 30s and terminate sockets that don't respond
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      ws.terminate(); // triggers 'close' event → handleDisconnect
+      return;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+wss.on('close', () => clearInterval(heartbeatInterval));
 
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

@@ -79,14 +79,15 @@ export default function PingSidebar({
       }
     });
 
-    // 2. Add registered users with active in-memory chat history or unread messages
+    // 2. Add registered users with active in-memory chat history, unread messages, OR currently online
     (registeredUsers || []).forEach(u => {
       if (!u || !u.username || u.username.toLowerCase() === (currentUsername || '').toLowerCase()) return;
       const uLower = u.username.toLowerCase();
       const hasInMemoryHistory = chatHistory[u.username] && chatHistory[u.username].length > 0;
       const hasUnread = (unreadCounts[uLower] || 0) > 0;
+      const isCurrentlyOnline = uLower === 'pingbot' ? true : !!u.isOnline;
 
-      if (hasInMemoryHistory || hasUnread) {
+      if (hasInMemoryHistory || hasUnread || isCurrentlyOnline) {
         const existing = userMap.get(uLower) || {};
         const lastInMemory = getLastMsg(u.username);
 
@@ -96,7 +97,7 @@ export default function PingSidebar({
           username: u.username,
           displayName: u.displayName || u.username,
           email: u.email || existing.email || '',
-          isOnline: uLower === 'pingbot' ? true : u.isOnline,
+          isOnline: isCurrentlyOnline,
           lastSeen: u.lastSeen,
           bio: uLower === 'pingbot' ? "🤖 AI Assistant & Coding Companion" : (u.bio || existing.bio || ''),
           avatarColor: uLower === 'pingbot' ? "#8b5cf6" : (u.avatarColor || existing.avatarColor || '#6366f1'),
@@ -113,11 +114,14 @@ export default function PingSidebar({
     // Filter by search query
     const list = Array.from(userMap.values()).filter(u => matchesQuery(u, searchQuery));
 
-    // Sort by latest message timestamp descending
+    // Sort: conversations with history first (by recency), then online-only users alphabetically
     return list.sort((a, b) => {
       const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
       const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
-      return timeB - timeA;
+      if (timeA && timeB) return timeB - timeA;
+      if (timeA) return -1; // a has history, sort first
+      if (timeB) return 1;  // b has history, sort first
+      return (a.username || '').localeCompare(b.username || ''); // both no history: alphabetical
     });
   };
 
