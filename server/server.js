@@ -22,11 +22,14 @@ import { handleHistory, sendInitialHistory } from './handlers/history.handler.js
 import { handleTyping } from './handlers/typing.handler.js';
 import { handleCall } from './handlers/call.handler.js';
 
+import { User } from './models/User.js';
+
 const PORT = process.env.PORT ?? 9000;
 const app = express();
 
-// Connect MongoDB
+// Connect MongoDB & reset stale DB online flags
 await connectDB();
+await User.updateMany({}, { isOnline: false }).catch(err => console.error('Error resetting DB online states on boot:', err));
 
 // Express Middleware & API Routes
 app.use(corsConfig);

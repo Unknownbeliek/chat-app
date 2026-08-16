@@ -45,7 +45,7 @@ describe('users.routes.js', () => {
       expect(res.body.users[0].username).toBe('PingBot');
       expect(res.body.users[1].isOnline).toBe(true);
       expect(res.body.users[2].isOnline).toBe(false);
-      expect(res.body.onlineCount).toBe(1);
+      expect(res.body.onlineCount).toBe(2);
     });
   });
 

@@ -1,6 +1,20 @@
 import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
 import { User } from '../models/User.js';
+import { activeUsers } from '../services/activeUsers.service.js';
+
+function getUnreadForUser(unreadCountObj, targetUsername) {
+  if (!unreadCountObj) return 0;
+  const targetLower = targetUsername.toLowerCase();
+  if (typeof unreadCountObj.get === 'function') {
+    return unreadCountObj.get(targetLower) || unreadCountObj.get(targetUsername) || 0;
+  }
+  if (typeof unreadCountObj === 'object') {
+    const key = Object.keys(unreadCountObj).find(k => k.toLowerCase() === targetLower);
+    return key ? (unreadCountObj[key] || 0) : 0;
+  }
+  return 0;
+}
 
 export async function getPrivateMessages(req, res, next) {
   try {
@@ -76,20 +90,19 @@ export async function getChatHistory(req, res, next) {
       }
     });
 
-    // 2. Combine with Conversation records for unread count and latest timestamps
+    // 2. Combine with Conversation records for unread count and latest timestamps using case-insensitive participant matching
     const conversations = await Conversation.find({
-      participants: lowerUser
+      participants: new RegExp(`^${lowerUser}$`, 'i')
     }).lean();
 
     conversations.forEach(c => {
-      const partner = c.participants.find(p => p !== lowerUser);
+      const partner = (c.participants || []).find(p => p.toLowerCase() !== lowerUser);
       if (partner) {
-        const unread = c.unreadCount instanceof Map
-          ? (c.unreadCount.get(lowerUser) || 0)
-          : (c.unreadCount?.[lowerUser] || 0);
+        const partnerLower = partner.toLowerCase();
+        const unread = getUnreadForUser(c.unreadCount, lowerUser);
 
-        if (peerMap.has(partner)) {
-          const existing = peerMap.get(partner);
+        if (peerMap.has(partnerLower)) {
+          const existing = peerMap.get(partnerLower);
           existing.unreadCount = unread;
           if (new Date(c.lastMessageAt) > new Date(existing.lastMessageAt)) {
             existing.lastMessage = c.lastMessage;
@@ -97,8 +110,8 @@ export async function getChatHistory(req, res, next) {
             existing.lastMessageAt = c.lastMessageAt;
           }
         } else {
-          peerMap.set(partner, {
-            partner,
+          peerMap.set(partnerLower, {
+            partner: partnerLower,
             lastMessage: c.lastMessage,
             lastMessageSender: c.lastMessageSender,
             lastMessageAt: c.lastMessageAt,
@@ -119,9 +132,12 @@ export async function getChatHistory(req, res, next) {
       profileMap.set(u.username.toLowerCase(), u);
     });
 
-    // 4. Assemble output list sorted by lastMessageAt descending
+    // 4. Assemble output list sorted by lastMessageAt descending, using live activeUsers presence
     const chatHistory = Array.from(peerMap.values()).map(item => {
-      const profile = profileMap.get(item.partner.toLowerCase()) || {};
+      const partnerLower = item.partner.toLowerCase();
+      const profile = profileMap.get(partnerLower) || {};
+      const isOnline = partnerLower === 'pingbot' ? true : activeUsers.has(partnerLower);
+
       return {
         partner: profile.username || item.partner,
         username: profile.username || item.partner,
@@ -129,7 +145,7 @@ export async function getChatHistory(req, res, next) {
         status: profile.status || '',
         avatarColor: profile.avatarColor || '#6366f1',
         avatarUrl: profile.avatarUrl || '',
-        isOnline: !!profile.isOnline,
+        isOnline,
         lastSeen: profile.lastSeen,
         lastMessage: item.lastMessage,
         lastMessageSender: item.lastMessageSender,
@@ -155,16 +171,14 @@ export async function getActiveChats(req, res, next) {
     const lowerUser = username.trim().toLowerCase();
 
     const conversations = await Conversation.find({
-      participants: lowerUser
+      participants: new RegExp(`^${lowerUser}$`, 'i')
     })
       .sort({ lastMessageAt: -1 })
       .lean();
 
     const result = conversations.map(c => {
-      const partner = c.participants.find(p => p !== lowerUser) || lowerUser;
-      const unread = c.unreadCount instanceof Map
-        ? (c.unreadCount.get(lowerUser) || 0)
-        : (c.unreadCount?.[lowerUser] || 0);
+      const partner = (c.participants || []).find(p => p.toLowerCase() !== lowerUser) || lowerUser;
+      const unread = getUnreadForUser(c.unreadCount, lowerUser);
       return {
         partner,
         lastMessage: c.lastMessage,

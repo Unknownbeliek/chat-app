@@ -37,7 +37,7 @@ export async function getAllUsers(req, res, next) {
     res.json({
       success: true,
       users: result,
-      onlineCount: activeUsers.size
+      onlineCount: activeUsers.size + 1
     });
   } catch (err) {
     next(err);
