@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getUsernameColor, getInitials } from '../../utils/avatarUtils';
 
 export default function Avatar({ name, customColor, avatarUrl, size = "md", isOnline = false, showBadge = false }) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl, name]);
 
   const sizeClasses = {
     sm: "w-8 h-8 text-xs",

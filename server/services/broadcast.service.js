@@ -65,7 +65,7 @@ export async function broadcastUserList() {
     broadcast({
       type: 'userList',
       users: usersData,
-      onlineCount: activeUsersRef.size
+      onlineCount: activeUsersRef.size + 1
     });
   } catch (err) {
     console.error('Error broadcasting user list:', err);

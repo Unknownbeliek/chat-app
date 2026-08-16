@@ -57,6 +57,7 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
   const reconnectTimeoutRef = useRef(null);
   const reconnectDelayRef = useRef(1000);
   const isIntentionalCloseRef = useRef(false);
+  const pendingMessagesRef = useRef([]);
 
   // Keep refs to dynamic callbacks to prevent socket tearing down on parent re-renders
   const selectedUserRef = useRef(selectedUser);
@@ -96,6 +97,16 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
           type: 'register',
           username: username.trim()
         }));
+
+        // Flush any queued messages sent while connecting
+        if (pendingMessagesRef.current.length > 0) {
+          pendingMessagesRef.current.forEach(msgStr => {
+            if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+              ws.current.send(msgStr);
+            }
+          });
+          pendingMessagesRef.current = [];
+        }
       };
 
       ws.current.onclose = (event) => {
@@ -138,13 +149,16 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
 
             case 'userStatusChanged':
               if (data.username) {
-                setRegisteredUsers(prev =>
-                  prev.map(u =>
+                setRegisteredUsers(prev => {
+                  const updated = prev.map(u =>
                     u.username.toLowerCase() === data.username.toLowerCase()
                       ? { ...u, isOnline: data.isOnline, lastSeen: data.lastSeen }
                       : u
-                  )
-                );
+                  );
+                  const onlineTotal = updated.filter(u => u.isOnline).length;
+                  setOnlineCount(onlineTotal);
+                  return updated;
+                });
               }
               break;
 
@@ -340,6 +354,16 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
               }
               break;
 
+            case 'unread_cleared':
+              if (data.partner) {
+                setUnreadCounts(prev => {
+                  const copy = { ...prev };
+                  delete copy[data.partner.toLowerCase()];
+                  return copy;
+                });
+              }
+              break;
+
             case 'pingbot_thinking':
               setTypingUsers(prev => ({
                 ...prev,
@@ -402,8 +426,11 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
   }, [isLoggedIn, username]);
 
   const sendMessage = useCallback((type, payload) => {
+    const msgStr = JSON.stringify({ type, ...payload });
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ type, ...payload }));
+      ws.current.send(msgStr);
+    } else {
+      pendingMessagesRef.current.push(msgStr);
     }
   }, []);
 

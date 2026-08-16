@@ -71,7 +71,7 @@ describe('broadcast.service.js', () => {
       expect(openClient.send).toHaveBeenCalled();
       const callArg = JSON.parse(openClient.send.mock.calls[0][0]);
       expect(callArg.type).toBe('userList');
-      expect(callArg.onlineCount).toBe(1);
+      expect(callArg.onlineCount).toBe(2);
       expect(callArg.users.length).toBe(3);
       expect(callArg.users[0].username).toBe('PingBot');
       expect(callArg.users[1].isOnline).toBe(true);

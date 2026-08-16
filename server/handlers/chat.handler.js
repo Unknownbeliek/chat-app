@@ -236,6 +236,14 @@ export async function handleChat(ws, data, currentUsername) {
         { $set: { status: 'read' } }
       );
 
+      // Send confirmation to reader socket so client clears local unread badge
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'unread_cleared',
+          partner: recipient
+        }));
+      }
+
       // Send real-time WS event to partner that reader has read their messages!
       const partnerUser = activeUsers.get(recipient.toLowerCase());
       if (partnerUser && partnerUser.ws.readyState === 1) {

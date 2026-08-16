@@ -34,8 +34,8 @@ describe('pingbot.service.js', () => {
     // Fast forward past the 400ms delay in handlePingBotQuery
     vi.advanceTimersByTime(450);
 
-    expect(broadcastService.broadcast).toHaveBeenCalled();
-    const messageObj = broadcastService.broadcast.mock.calls[0][0];
+    expect(broadcastService.broadcast).toHaveBeenCalledTimes(2);
+    const messageObj = broadcastService.broadcast.mock.calls[1][0];
     expect(messageObj.type).toBe('global_chat');
     expect(messageObj.sender).toBe('PingBot');
     expect(messageObj.message).toMatch(/Hello @alice!/);
