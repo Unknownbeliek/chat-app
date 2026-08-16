@@ -150,13 +150,31 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
             case 'userStatusChanged':
               if (data.username) {
                 setRegisteredUsers(prev => {
-                  const updated = prev.map(u =>
-                    u.username.toLowerCase() === data.username.toLowerCase()
-                      ? { ...u, isOnline: data.isOnline, lastSeen: data.lastSeen }
-                      : u
-                  );
-                  const onlineTotal = updated.filter(u => u.isOnline).length;
-                  setOnlineCount(onlineTotal);
+                  const targetLower = data.username.toLowerCase();
+                  const exists = prev.some(u => u.username && u.username.toLowerCase() === targetLower);
+                  let updated;
+                  if (exists) {
+                    updated = prev.map(u =>
+                      u.username && u.username.toLowerCase() === targetLower
+                        ? { ...u, isOnline: data.isOnline, lastSeen: data.lastSeen }
+                        : u
+                    );
+                  } else {
+                    updated = [
+                      ...prev,
+                      {
+                        username: data.username,
+                        bio: data.bio || '',
+                        status: data.status || '',
+                        avatarColor: data.avatarColor || '#6366f1',
+                        avatarUrl: data.avatarUrl || '',
+                        isOnline: data.isOnline,
+                        lastSeen: data.lastSeen
+                      }
+                    ];
+                  }
+                  const onlineCountNum = updated.filter(u => u.isOnline).length + (updated.some(u => u.username && u.username.toLowerCase() === 'pingbot') ? 0 : 1);
+                  setOnlineCount(onlineCountNum);
                   return updated;
                 });
               }
@@ -455,7 +473,9 @@ export function useWebSocket({ username, isLoggedIn, selectedUser, getWsUrl, onN
   return {
     isConnecting,
     onlineCount,
+    setOnlineCount,
     registeredUsers,
+    setRegisteredUsers,
     chatHistory,
     setChatHistory,
     typingUsers,

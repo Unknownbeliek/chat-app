@@ -40,6 +40,7 @@ export async function broadcastUserList() {
     // Build a Set of usernames that have an active WebSocket connection
     const onlineUserSet = new Set(Array.from(activeUsersRef.keys()));
     const usersData = allDbUsers.map(u => ({
+      _id: u._id ? u._id.toString() : undefined,
       username: u.username,
       bio: u.bio || '',
       status: u.status || '',

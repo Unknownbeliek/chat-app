@@ -168,7 +168,9 @@ export default function Chat() {
   const {
     isConnecting,
     onlineCount,
+    setOnlineCount,
     registeredUsers,
+    setRegisteredUsers,
     chatHistory,
     setChatHistory,
     typingUsers,
@@ -339,8 +341,11 @@ export default function Chat() {
       const res = await fetch(`${getApiUrl()}/api/users`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.success) {
-        // Updated users populated via WS
+      if (data.success && Array.isArray(data.users)) {
+        setRegisteredUsers(data.users);
+        if (data.onlineCount !== undefined) {
+          setOnlineCount(data.onlineCount);
+        }
       }
     } catch (e) {
       // Ignore network errors gracefully
